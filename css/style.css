@@ -69,5 +69,10 @@ body {
   #mobile-nav button.active {
     background: #007bff;
   }
-}
 
+#canada-splash {
+  position: fixed;
+  top:0; left:0; right:0; bottom:0;
+  background: white url('/icons/splash-2048.png') no-repeat center / contain;
+  z-index: 9999;
+}
