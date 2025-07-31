@@ -1,21 +1,27 @@
 {
-  "name":               "Stage Canada Planner",
-  "short_name":         "StagePlanner",
-  "theme_color":        "#2C3E50",
-  "background_color":   "#F4F6F8",
-  "display":            "standalone",
-  "scope":              "/",
-  "start_url":          "/?homescreen=1",
+  "name": "Stage Planner CA",
+  "short_name": "StagePlanner",
+  "description": "Ton assistant de préparation de stage au Canada",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#5c2f8a",
   "icons": [
     {
-      "src":    "/icons/icon-192.png",
-      "sizes":  "192x192",
-      "type":   "image/png"
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
     },
     {
-      "src":    "/icons/icon-512.png",
-      "sizes":  "512x512",
-      "type":   "image/png"
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/splash-2048.png",
+      "sizes": "2048x2048",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
