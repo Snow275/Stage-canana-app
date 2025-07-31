@@ -22,4 +22,52 @@ body {
   opacity: 0.6;
 }
 
+/* 1) On commence par cacher le footer-nav en desktop */
+#mobile-nav {
+  display: none;
+}
+
+/* 2) Quand l’écran fait ≤768px, on cache la sidebar et on affiche le footer-nav */
+@media (max-width: 768px) {
+  /* masquer la sidebar fixe */
+  #sidebar {
+    display: none;
+  }
+
+  /* prendre toute la largeur pour le contenu */
+  .tab-content {
+    padding-bottom: 4rem; /* laisser de la place pour le footer */
+  }
+
+  /* afficher le footer-nav */
+  #mobile-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #111;      /* fond sombre */
+    color: #fff;
+    justify-content: space-around;
+    align-items: center;
+    height: 3.5rem;        /* ajustez la hauteur */
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
+    z-index: 1000;
+  }
+  #mobile-nav button {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.2rem;
+    padding: 0;
+    flex: 1;
+  }
+  #mobile-nav button:focus {
+    outline: none;
+  }
+  /* Active state (optionnel) */
+  #mobile-nav button.active {
+    background: #007bff;
+  }
+}
 
