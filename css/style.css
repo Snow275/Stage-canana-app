@@ -1,0 +1,25 @@
+/* css/style.css */
+body {
+  font-family: 'Segoe UI', sans-serif;
+  height: 100vh;
+  margin: 0;
+}
+#sidebar {
+  min-height: 100vh;
+}
+.tab-content {
+  overflow-y: auto;
+  padding-bottom: 2rem;
+}
+/* Dashboard budget chart */
+#dashboard-budget-chart, #budget-chart {
+  width: 100% !important;
+  height: 100% !important;
+}
+/* Courses completed */
+#course-list li.checked {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+
