@@ -1,5 +1,4 @@
 // js/contacts.js
-// js/contacts.js
 import {
   db,
   collection,
@@ -10,151 +9,142 @@ import {
   deleteDoc
 } from "./firebase.js";
 
+// Référence à la collection Firestore
 const contactsCol = collection(db, "contacts");
 
+/**
+ * Écoute temps réel des contacts.
+ * @param {Function} cb callback qui reçoit un tableau [{id, name, email, phone, createdAt}, ...]
+ * @returns unsubscribe function
+ */
 export function subscribeContacts(cb) {
   return onSnapshot(contactsCol, snap => {
-    const contacts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const contacts = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => a.createdAt - b.createdAt);
     cb(contacts);
   });
 }
 
-// data = { name, email, phone }
+/** Ajout d’un contact. data = { name, email, phone } */
 export function addContact(data) {
   return addDoc(contactsCol, { ...data, createdAt: Date.now() });
 }
 
+/** Mise à jour d’un contact */
 export function updateContact(id, updates) {
   return updateDoc(doc(db, "contacts", id), updates);
 }
 
+/** Suppression d’un contact */
 export function removeContact(id) {
   return deleteDoc(doc(db, "contacts", id));
 }
 
+
 /**
- * Module Contacts
+ * Module Contacts – initialisation UI
  */
 export function initContacts() {
-  console.log('⚙️ initContacts() démarré');
+  const form = document.getElementById("contact-form");
+  const nameI = document.getElementById("contact-name");
+  const mailI = document.getElementById("contact-email");
+  const phoneI = document.getElementById("contact-phone");
+  const list = document.getElementById("contact-list");
+  const btnExp = document.getElementById("export-contacts");
 
-  const form   = document.getElementById('contact-form');
-  const nameI  = document.getElementById('contact-name');
-  const mailI  = document.getElementById('contact-email');
-  const phoneI = document.getElementById('contact-phone');
-  const list   = document.getElementById('contact-list');
-  const btnExp = document.getElementById('export-contacts');
-
-  console.log('→ form ?', form, 'fields:', nameI, mailI, phoneI, 'list:', list, 'btnExp:', btnExp);
   if (!form || !nameI || !mailI || !phoneI || !list || !btnExp) {
-    console.error('❌ Un élément contact est introuvable !');
+    console.error("❌ initContacts: un élément introuvable");
     return;
   }
 
-  let contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
-  let editId   = null;
-  console.log('→ contacts chargés', contacts);
+  let editId = null;
 
-  // Affiche existants
-  contacts.forEach(renderContact);
+  // 1) Affiche en temps réel
+  subscribeContacts(contacts => {
+    list.innerHTML = "";
+    contacts.forEach(renderContact);
+  });
 
-  // Soumission
-  form.addEventListener('submit', e => {
+  // 2) Gestion du formulaire
+  form.addEventListener("submit", async e => {
     e.preventDefault();
-    const name  = nameI.value.trim();
+    const name = nameI.value.trim();
     const email = mailI.value.trim();
     const phone = phoneI.value.trim();
-    console.log('📥 submit contact', { name, email, phone, editId });
     if (!name || !email || !phone) {
-      alert('Tous les champs sont requis');
-      return;
+      return alert("Tous les champs sont requis.");
     }
 
     if (editId) {
-      const idx = contacts.findIndex(c => c.id === editId);
-      contacts[idx] = { id: editId, name, email, phone };
+      await updateContact(editId, { name, email, phone });
       editId = null;
-      form.querySelector('button').textContent = 'OK';
-      list.innerHTML = '';
-      contacts.forEach(renderContact);
+      form.querySelector("button").textContent = "OK";
     } else {
-      const c = { id: Date.now(), name, email, phone };
-      contacts.push(c);
-      renderContact(c);
+      await addContact({ name, email, phone });
     }
-    saveAll();
+
     form.reset();
   });
 
-  // Export
-  btnExp.addEventListener('click', () => {
-    console.log('📤 export contacts');
-    if (!contacts.length) return alert('Aucun contact à exporter !');
-    const header = 'id,nom,email,telephone';
-    const rows   = contacts.map(c => `${c.id},"${c.name.replace(/"/g,'""')}",${c.email},"${c.phone}"`);
-    downloadCSV('contacts.csv', [header, ...rows].join('\n'));
+  // 3) Export CSV manuel
+  btnExp.addEventListener("click", () => {
+    subscribeContacts(contacts => {
+      if (!contacts.length) return alert("Aucun contact à exporter !");
+      const header = "id,nom,email,telephone";
+      const rows = contacts.map(c =>
+        `${c.id},"${c.name.replace(/"/g, '""')}",${c.email},"${c.phone}"`
+      );
+      downloadCSV("contacts.csv", [header, ...rows].join("\n"));
+    })();
   });
 
+  // Affichage d’un contact dans la liste
   function renderContact(c) {
-    console.log('🖊 renderContact', c);
-    const li = document.createElement('li');
-    li.className = 'list-group-item d-flex justify-content-between align-items-center';
+    const li = document.createElement("li");
+    li.className = "list-group-item d-flex justify-content-between align-items-center";
     li.innerHTML = `
       <div>
-        <strong>${escapeHtml(c.name)}</strong><br>
-        <small>${escapeHtml(c.email)}</small><br>
-        <small>📞 ${escapeHtml(c.phone)}</small>
+        <strong>${escape(c.name)}</strong><br>
+        <small>${escape(c.email)}</small><br>
+        <small>📞 ${escape(c.phone)}</small>
       </div>
       <div>
         <button class="btn btn-sm btn-outline-warning me-1" title="Modifier">✏️</button>
-        <button class="btn btn-sm btn-outline-danger"  title="Supprimer">❌</button>
+        <button class="btn btn-sm btn-outline-danger" title="Supprimer">❌</button>
       </div>
     `;
-    const [btnEdit, btnDel] = li.querySelectorAll('button');
+    const [btnEdit, btnDel] = li.querySelectorAll("button");
+
     btnEdit.onclick = () => {
-      console.log('✏️ modifier', c.id);
       editId = c.id;
-      nameI.value  = c.name;
-      mailI.value  = c.email;
+      nameI.value = c.name;
+      mailI.value = c.email;
       phoneI.value = c.phone;
-      form.querySelector('button').textContent = 'Modifier';
+      form.querySelector("button").textContent = "Modifier";
     };
-    btnDel.onclick = () => {
-      console.log('🗑 supprimer', c.id);
-      if (!confirm('Supprimer ce contact ?')) return;
-      contacts = contacts.filter(x => x.id !== c.id);
-      saveAll();
-      li.remove();
-      if (editId === c.id) {
-        editId = null;
-        form.reset();
-        form.querySelector('button').textContent = 'OK';
+
+    btnDel.onclick = async () => {
+      if (confirm("Supprimer ce contact ?")) {
+        await removeContact(c.id);
       }
     };
+
     list.appendChild(li);
   }
 
-  function saveAll() {
-    console.log('💾 saveAll contacts', contacts);
-    localStorage.setItem('contacts', JSON.stringify(contacts));
-  }
-
   function downloadCSV(filename, text) {
-    const a = document.createElement('a');
-    a.href     = 'data:text/csv;charset=utf-8,' + encodeURIComponent(text);
+    const a = document.createElement("a");
+    a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(text);
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
   }
 
-  function escapeHtml(s) {
-    const div = document.createElement('div');
-    div.textContent = s;
-    return div.innerHTML;
+  function escape(s) {
+    const d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
   }
-}
-
-export function getContacts() {
-  return JSON.parse(localStorage.getItem('contacts') || '[]');
 }
