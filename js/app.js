@@ -11,15 +11,6 @@ import { initInvoices }  from './invoices.js';
 import { initDocuments } from './documents.js';
 import { initDashboard } from './dashboard.js';
 
-<!-- PWA / head… -->
-<script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
-<!-- si tu veux un relais distant (optionnel) -->
-<!-- <script>window.gun = Gun({ peers: ['https://your-relay.herokuapp.com/gun'] });</script> -->
-<script>window.gun = Gun();</script>
-<script type="module" src="js/app.js"></script>
-</body>
-</html>
-
 // 2) Enregistrement du Service Worker pour la PWA
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker
