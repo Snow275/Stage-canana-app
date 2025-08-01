@@ -70,9 +70,37 @@ body {
     background: #007bff;
   }
 
-#canada-splash {
+/* Splash screen full-screen */
+#splash-overlay {
   position: fixed;
-  top:0; left:0; right:0; bottom:0;
-  background: white url('/icons/splash-2048.png') no-repeat center / contain;
-  z-index: 9999;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  animation: splash-fade 2.5s forwards; /* durée + auto-disparition */
+}
+
+#splash-logo {
+  width: 50vw;
+  max-width: 300px;
+  animation: logo-bounce 2.5s forwards;
+}
+
+/* 1) Logo qui grossit/rétrécit */
+@keyframes logo-bounce {
+  0%   { transform: scale(0.5); opacity: 0; }
+  50%  { transform: scale(1.1); opacity: 1; }
+  80%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+/* 2) Overlay qui disparaît (fade out) */
+@keyframes splash-fade {
+  0%,  80% { opacity: 1; }
+  100%     { opacity: 0; visibility: hidden; }
 }
