@@ -1,19 +1,20 @@
 // js/calendar.js
 
 /**
- * Module Calendrier (FullCalendar + Bootstrap Modal)
+ * Module Calendrier
  */
 export function initCalendar() {
   console.log('⚙️ initCalendar() démarré');
 
   const calendarEl = document.getElementById('calendar');
   const modalEl    = document.getElementById('eventModal');
+  console.log('→ calendarEl ?', calendarEl, 'modalEl ?', modalEl);
+
   if (!calendarEl || !modalEl) {
-    console.error('calendarEl ou modalEl introuvable');
+    console.error('❌ calendarEl ou modalEl introuvable !');
     return;
   }
 
-  // Préparation de la modal Bootstrap
   const bsModal   = new bootstrap.Modal(modalEl);
   const fldTitle  = modalEl.querySelector('#modal-title');
   const fldStart  = modalEl.querySelector('#modal-start');
@@ -22,8 +23,15 @@ export function initCalendar() {
   const btnSave   = modalEl.querySelector('#save-event');
   const btnDel    = modalEl.querySelector('#delete-event');
 
-  // Charge les événements
+  if (!fldTitle || !fldStart || !fldEnd || !fldColor || !btnSave || !btnDel) {
+    console.error('❌ Un des champs de la modal est introuvable !', { fldTitle, fldStart, fldEnd, fldColor, btnSave, btnDel });
+    return;
+  }
+
+  // Charge les événements existants
   let events = JSON.parse(localStorage.getItem('events') || '[]');
+  console.log('→ événements chargés', events);
+
   let currentEvt = null;
 
   // Initialise FullCalendar
@@ -39,6 +47,7 @@ export function initCalendar() {
     editable: true,
     events,
     select: info => {
+      console.log('▶️ select', info.startStr, info.endStr);
       const title = prompt('Titre de l’événement :');
       if (title) {
         const ev = {
@@ -52,14 +61,18 @@ export function initCalendar() {
         calendar.addEvent(ev);
         events.push(ev);
         saveEvents();
+        console.log('➕ événement ajouté', ev);
       }
       calendar.unselect();
     },
     eventClick: info => {
+      console.log('▶️ eventClick', info.event);
       currentEvt = info.event;
       fldTitle.value = currentEvt.title;
       fldStart.value = currentEvt.start.toISOString().slice(0,16);
-      fldEnd.value   = (currentEvt.end || currentEvt.start).toISOString().slice(0,16);
+      fldEnd.value   = currentEvt.end
+                        ? currentEvt.end.toISOString().slice(0,16)
+                        : currentEvt.start.toISOString().slice(0,16);
       fldColor.value = currentEvt.backgroundColor || '#3788d8';
       bsModal.show();
     }
@@ -68,22 +81,28 @@ export function initCalendar() {
   calendar.render();
   console.log('✅ FullCalendar rendu');
 
-  // Sauvegarde en localStorage
+  // Sauvegarde et mise à jour stockage
   function saveEvents() {
     localStorage.setItem('events', JSON.stringify(events));
+    console.log('💾 events sauvegardés', events);
   }
 
-  // Bouton Enregistrer
+  // Enregistre les modifications depuis la modal
   btnSave.addEventListener('click', () => {
     if (!currentEvt) return;
-    const col = fldColor.value;
+    console.log('✏️ save-event', {
+      title: fldTitle.value,
+      start: fldStart.value,
+      end:   fldEnd.value,
+      color: fldColor.value
+    });
     currentEvt.setProp('title', fldTitle.value.trim() || currentEvt.title);
     currentEvt.setStart(fldStart.value);
     currentEvt.setEnd(fldEnd.value);
+    const col = fldColor.value;
     currentEvt.setProp('backgroundColor', col);
     currentEvt.setProp('borderColor', col);
 
-    // Met à jour le tableau events
     const idx = events.findIndex(e => e.id == currentEvt.id);
     if (idx > -1) {
       events[idx] = {
@@ -99,13 +118,17 @@ export function initCalendar() {
     bsModal.hide();
   });
 
-  // Bouton Supprimer
+  // Supprime un événement depuis la modal
   btnDel.addEventListener('click', () => {
     if (!currentEvt) return;
     if (!confirm(`Supprimer "${currentEvt.title}" ?`)) return;
+    console.log('🗑 delete-event', currentEvt.id);
     currentEvt.remove();
-    events = events.filter(e => e.id != currentEvt.id);
-    saveEvents();
+    const idx = events.findIndex(e => e.id == currentEvt.id);
+    if (idx > -1) {
+      events.splice(idx, 1);
+      saveEvents();
+    }
     bsModal.hide();
   });
 }

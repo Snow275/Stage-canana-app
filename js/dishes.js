@@ -1,100 +1,69 @@
 // js/dishes.js
-import {
-  db,
-  collection,
-  doc,
-  onSnapshot,
-  addDoc,
-  deleteDoc
-} from "./firebase.js";
 
-const dishesCol = collection(db, "dishes");
-
-// 1) Abonnement temps réel
-export function subscribeDishes(cb) {
-  return onSnapshot(dishesCol, snap => {
-    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    cb(list);
-  });
-}
-
-// 2) Ajout d’un plat
-// data = { text }
-export function addDish(data) {
-  return addDoc(dishesCol, { ...data, createdAt: Date.now() });
-}
-
-// 3) Suppression d’un plat
-export function removeDish(id) {
-  return deleteDoc(doc(db, "dishes", id));
-}
-
-/**
- * Module "Liste de plats" (onglet Courses)
- */
 export function initDishes() {
-  const form = document.getElementById("dish-form");
-  const input = document.getElementById("dish-input");
-  const list = document.getElementById("dish-list");
-  const btnExp = document.getElementById("export-dishes");
+  const form   = document.getElementById('dish-form');
+  const input  = document.getElementById('dish-input');
+  const list   = document.getElementById('dish-list');
+  const btnExp = document.getElementById('export-dishes');
 
-  // Affichage initial + mise à jour en temps réel
-  let currentDishes = [];
-  subscribeDishes(listFromFirestore => {
-    currentDishes = listFromFirestore.sort((a,b) => b.createdAt - a.createdAt);
-    renderAll();
-  });
+  // récupère la liste ou initialise
+  let dishes = JSON.parse(localStorage.getItem('dishes') || '[]');
 
-  // Soumission du formulaire
-  form.addEventListener("submit", async e => {
+  // affichage initial
+  dishes.forEach(renderDish);
+
+  // ajout d’un plat
+  form.addEventListener('submit', e => {
     e.preventDefault();
-    const text = input.value.trim();
-    if (!text) return;
-    await addDish({ text });
-    input.value = "";
+    const txt = input.value.trim();
+    if (!txt) return;
+    const d = { id: Date.now(), text: txt };
+    dishes.push(d);
+    saveAll();
+    renderDish(d);
+    input.value = '';
   });
 
-  // Export CSV
-  btnExp.addEventListener("click", () => {
-    if (!currentDishes.length) return alert("Aucun plat à exporter !");
-    const header = "id,plat";
-    const rows = currentDishes.map(d => `${d.id},"${d.text.replace(/"/g,'""')}"`);
-    downloadCSV("dishes.csv", [header, ...rows].join("\n"));
+  // export CSV
+  btnExp.addEventListener('click', () => {
+    if (!dishes.length) return alert('Aucun plat à exporter !');
+    const header = 'id,plat';
+    const rows = dishes.map(d => `${d.id},"${d.text.replace(/"/g,'""')}"`);
+    downloadCSV('dishes.csv', [header, ...rows].join('\n'));
   });
 
-  // Rouillette de rendu
-  function renderAll() {
-    list.innerHTML = "";
-    currentDishes.forEach(renderDish);
-  }
-
+  // affiche un plat dans la liste
   function renderDish(d) {
-    const li = document.createElement("li");
-    li.className = "list-group-item d-flex justify-content-between align-items-center";
+    const li = document.createElement('li');
+    li.className = 'list-group-item d-flex justify-content-between align-items-center';
     li.innerHTML = `
       <span>${escapeHtml(d.text)}</span>
       <button class="btn btn-sm btn-outline-danger" title="Supprimer">❌</button>
     `;
-    li.querySelector("button").onclick = async () => {
+    li.querySelector('button').onclick = () => {
       if (!confirm(`Supprimer "${d.text}" ?`)) return;
-      await removeDish(d.id);
+      dishes = dishes.filter(x => x.id !== d.id);
+      saveAll();
+      li.remove();
     };
     list.appendChild(li);
   }
 
-  // Téléchargement CSV
+  function saveAll() {
+    localStorage.setItem('dishes', JSON.stringify(dishes));
+  }
+
   function downloadCSV(filename, text) {
-    const a = document.createElement("a");
-    a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(text);
+    const a = document.createElement('a');
+    a.href     = 'data:text/csv;charset=utf-8,' + encodeURIComponent(text);
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
   }
 
-  // Sécurité XSS
   function escapeHtml(s) {
-    const div = document.createElement("div");
+    const div = document.createElement('div');
     div.textContent = s;
     return div.innerHTML;
   }

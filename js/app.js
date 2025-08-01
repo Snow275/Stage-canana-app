@@ -20,7 +20,17 @@ if ('serviceWorker' in navigator) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 3) Initialisation de tous les modules
+  // Au bout de 2.5s (durée de l'animation), on supprime l'overlay du DOM
+  setTimeout(() => {
+    const splash = document.getElementById('splash-overlay');
+    if (splash) splash.remove();
+  }, 2500);
+});
+
+
+// 3) Initialisation générale au chargement du DOM
+document.addEventListener('DOMContentLoaded', () => {
+  // 3.1) Initialiser tous les modules fonctionnels
   initTasks();
   initCalendar();
   initContacts();
@@ -31,27 +41,22 @@ document.addEventListener('DOMContentLoaded', () => {
   initDocuments();
   initDashboard();
 
-  // 4) Navigation mobile en bas d'écran
+  // 3.2) Mise en place de la navigation mobile (footer-nav)
   const navButtons = document.querySelectorAll('#mobile-nav button');
   if (navButtons.length) {
     navButtons.forEach(btn => {
       btn.addEventListener('click', () => {
+        // Afficher l’onglet Bootstrap correspondant
         const target = btn.getAttribute('data-bs-target');
         const triggerEl = document.querySelector(`button[data-bs-target="${target}"]`);
         new bootstrap.Tab(triggerEl).show();
+
+        // Gérer l’état "actif" du bouton
         navButtons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
       });
     });
-    // Activation du premier onglet mobile
+    // Activer le premier bouton au démarrage
     navButtons[0].classList.add('active');
-  }
-
-  // 5) Quand on passe à l’onglet "Préparation", redimensionner le calendrier
-  const prepTabBtn = document.querySelector('button[data-bs-target="#preparation"]');
-  if (prepTabBtn) {
-    prepTabBtn.addEventListener('shown.bs.tab', () => {
-      window.dispatchEvent(new Event('resize'));
-    });
   }
 });

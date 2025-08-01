@@ -1,118 +1,88 @@
 // js/courses.js
-import {
-  db,
-  collection,
-  doc,
-  onSnapshot,
-  addDoc,
-  updateDoc,
-  deleteDoc
-} from "./firebase.js";
-
-// Référence à la collection Firestore
-const coursesCol = collection(db, "courses");
 
 /**
- * Écoute temps réel des items
- * @param {Function} cb callback recevant [{id, text, done, createdAt}, ...]
- * @returns unsubscribe
- */
-export function subscribeCourses(cb) {
-  return onSnapshot(coursesCol, snap => {
-    const items = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => a.createdAt - b.createdAt);
-    cb(items);
-  });
-}
-
-/** Ajout d’un item */
-export function addCourse(data) {
-  // data = { text, done }
-  return addDoc(coursesCol, { ...data, createdAt: Date.now() });
-}
-
-/** Mise à jour d’un item */
-export function updateCourse(id, updates) {
-  return updateDoc(doc(db, "courses", id), updates);
-}
-
-/** Suppression d’un item */
-export function removeCourse(id) {
-  return deleteDoc(doc(db, "courses", id));
-}
-
-
-/**
- * Module Courses / Packing List – init UI
+ * Module Courses / Packing List
  */
 export function initCourses() {
-  const form = document.getElementById("course-form");
-  const input = document.getElementById("course-input");
-  const list = document.getElementById("course-list");
-  const btnExp = document.getElementById("export-courses");
+  console.log('⚙️ initCourses() démarré');
 
+  const form   = document.getElementById('course-form');
+  const input  = document.getElementById('course-input');
+  const list   = document.getElementById('course-list');
+  const btnExp = document.getElementById('export-courses');
+
+  console.log('→ form ? ', form, 'input ?', input, 'list ?', list, 'btnExp ?', btnExp);
   if (!form || !input || !list || !btnExp) {
-    console.error("❌ initCourses: éléments introuvables", { form, input, list, btnExp });
+    console.error('❌ Un élément Courses est introuvable !');
     return;
   }
 
-  // 1) Écoute temps réel
-  subscribeCourses(items => {
-    list.innerHTML = "";
-    items.forEach(renderItem);
-  });
+  let items = JSON.parse(localStorage.getItem('courses') || '[]');
+  console.log('→ items chargés', items);
+  items.forEach(renderItem);
 
-  // 2) Gestion du formulaire
-  form.addEventListener("submit", async e => {
+  // Gestion du formulaire
+  form.addEventListener('submit', e => {
     e.preventDefault();
     const text = input.value.trim();
+    console.log('📥 Soumission Courses, texte =', text);
     if (!text) return;
-    await addCourse({ text, done: false });
-    input.value = "";
+    const it = { id: Date.now(), text, done: false };
+    items.push(it);
+    saveAll();
+    renderItem(it);
+    input.value = '';
   });
 
-  // 3) Export CSV manuel
-  btnExp.addEventListener("click", () => {
-    subscribeCourses(items => {
-      if (!items.length) return alert("Rien à exporter");
-      const header = "id,texte,fait";
-      const rows = items.map(i =>
-        `${i.id},"${i.text.replace(/"/g,'""')}",${i.done}`
-      );
-      downloadCSV("courses.csv", [header, ...rows].join("\n"));
-    })();
+  // Export CSV
+  btnExp.addEventListener('click', () => {
+    console.log('📤 export Courses');
+    if (!items.length) return alert('Rien à exporter');
+    const header = 'id,texte,fait';
+    const rows   = items.map(i => `${i.id},"${i.text.replace(/"/g,'""')}",${i.done}`);
+    downloadCSV('courses.csv', [header, ...rows].join('\n'));
   });
 
-  // Affiche un item dans la liste
+  // Rendu d’un item
   function renderItem(i) {
-    const li = document.createElement("li");
-    li.className = "list-group-item d-flex justify-content-between align-items-center";
-    if (i.done) li.classList.add("checked");
+    console.log('🖊 renderItem', i);
+    const li = document.createElement('li');
+    li.className = 'list-group-item d-flex justify-content-between align-items-center';
+    if (i.done) li.classList.add('checked');
     li.innerHTML = `
       <span>${escapeHtml(i.text)}</span>
       <div>
         <button class="btn btn-sm btn-outline-success me-1" title="Toggle">✓</button>
-        <button class="btn btn-sm btn-outline-danger" title="Delete">❌</button>
+        <button class="btn btn-sm btn-outline-danger"       title="Delete">❌</button>
       </div>
     `;
-    const [btnDone, btnDel] = li.querySelectorAll("button");
+    const [btnDone, btnDel] = li.querySelectorAll('button');
 
-    btnDone.onclick = async () => {
-      await updateCourse(i.id, { done: !i.done });
+    btnDone.onclick = () => {
+      console.log('✅ toggle done', i.id);
+      i.done = !i.done;
+      saveAll();
+      li.classList.toggle('checked');
     };
-    btnDel.onclick = async () => {
-      if (confirm("Supprimer cet item ?")) {
-        await removeCourse(i.id);
-      }
+
+    btnDel.onclick = () => {
+      console.log('🗑 delete item', i.id);
+      items = items.filter(x => x.id !== i.id);
+      saveAll();
+      li.remove();
     };
 
     list.appendChild(li);
   }
 
+  function saveAll() {
+    console.log('💾 saveAll Courses', items);
+    localStorage.setItem('courses', JSON.stringify(items));
+  }
+
   function downloadCSV(filename, text) {
-    const a = document.createElement("a");
-    a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(text);
+    const a = document.createElement('a');
+    a.href     = 'data:text/csv;charset=utf-8,' + encodeURIComponent(text);
     a.download = filename;
     document.body.appendChild(a);
     a.click();
@@ -120,7 +90,7 @@ export function initCourses() {
   }
 
   function escapeHtml(s) {
-    const d = document.createElement("div");
+    const d = document.createElement('div');
     d.textContent = s;
     return d.innerHTML;
   }
