@@ -1,139 +1,142 @@
 // js/calendar.js
+import {
+  db,
+  collection,
+  doc,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc
+} from "./firebase.js";
+import { Calendar } from "@fullcalendar/core";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import interactionPlugin from "@fullcalendar/interaction";
+import frLocale from "@fullcalendar/core/locales/fr";
 
-/**
- * Module Calendrier
- */
+// 1) Référence Firestore
+const eventsCol = collection(db, "events");
+
+// 2) Abonnement temps réel
+export function subscribeEvents(cb) {
+  return onSnapshot(eventsCol, snap => {
+    const evts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Optionnel : trier par date de début
+    evts.sort((a,b) => new Date(a.start) - new Date(b.start));
+    cb(evts);
+  });
+}
+
+// 3) CRUD
+export function addEvent(evt) {
+  // evt = { title, start, end, backgroundColor, borderColor }
+  return addDoc(eventsCol, { ...evt, createdAt: Date.now() });
+}
+
+export function updateEvent(id, updates) {
+  return updateDoc(doc(db, "events", id), updates);
+}
+
+export function removeEvent(id) {
+  return deleteDoc(doc(db, "events", id));
+}
+
+// 4) Initialisation du calendrier
 export function initCalendar() {
-  console.log('⚙️ initCalendar() démarré');
-
-  const calendarEl = document.getElementById('calendar');
-  const modalEl    = document.getElementById('eventModal');
-  console.log('→ calendarEl ?', calendarEl, 'modalEl ?', modalEl);
-
+  const calendarEl = document.getElementById("calendar");
+  const modalEl    = document.getElementById("eventModal");
   if (!calendarEl || !modalEl) {
-    console.error('❌ calendarEl ou modalEl introuvable !');
+    console.error("❌ initCalendar: éléments introuvables");
     return;
   }
 
-  const bsModal   = new bootstrap.Modal(modalEl);
-  const fldTitle  = modalEl.querySelector('#modal-title');
-  const fldStart  = modalEl.querySelector('#modal-start');
-  const fldEnd    = modalEl.querySelector('#modal-end');
-  const fldColor  = modalEl.querySelector('#modal-color');
-  const btnSave   = modalEl.querySelector('#save-event');
-  const btnDel    = modalEl.querySelector('#delete-event');
-
-  if (!fldTitle || !fldStart || !fldEnd || !fldColor || !btnSave || !btnDel) {
-    console.error('❌ Un des champs de la modal est introuvable !', { fldTitle, fldStart, fldEnd, fldColor, btnSave, btnDel });
-    return;
-  }
-
-  // Charge les événements existants
-  let events = JSON.parse(localStorage.getItem('events') || '[]');
-  console.log('→ événements chargés', events);
+  // Prépare la modal Bootstrap
+  const bsModal  = new bootstrap.Modal(modalEl);
+  const fldTitle = modalEl.querySelector("#modal-title");
+  const fldStart = modalEl.querySelector("#modal-start");
+  const fldEnd   = modalEl.querySelector("#modal-end");
+  const fldColor = modalEl.querySelector("#modal-color");
+  const btnSave  = modalEl.querySelector("#save-event");
+  const btnDel   = modalEl.querySelector("#delete-event");
 
   let currentEvt = null;
 
-  // Initialise FullCalendar
-  const calendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: 'dayGridMonth',
+  // Crée le calendrier FullCalendar
+  const calendar = new Calendar(calendarEl, {
+    plugins: [ dayGridPlugin, timeGridPlugin, interactionPlugin ],
+    initialView: "dayGridMonth",
     headerToolbar: {
-      left:  'prev,next today',
-      center:'title',
-      right: 'dayGridMonth,timeGridWeek,timeGridDay'
+      left:  "prev,next today",
+      center:"title",
+      right: "dayGridMonth,timeGridWeek,timeGridDay"
     },
-    locale: 'fr',
+    locale: frLocale,
     selectable: true,
     editable: true,
-    events,
-    select: info => {
-      console.log('▶️ select', info.startStr, info.endStr);
-      const title = prompt('Titre de l’événement :');
-      if (title) {
-        const ev = {
-          id:              Date.now(),
-          title,
-          start:           info.startStr,
-          end:             info.endStr || info.startStr,
-          backgroundColor: '#3788d8',
-          borderColor:     '#3788d8'
-        };
-        calendar.addEvent(ev);
-        events.push(ev);
-        saveEvents();
-        console.log('➕ événement ajouté', ev);
+    select: async info => {
+      const title = prompt("Titre de l’événement ?");
+      if (!title) {
+        calendar.unselect();
+        return;
       }
+      const newEvt = {
+        title,
+        start: info.startStr,
+        end:   info.endStr || info.startStr,
+        backgroundColor: "#3788d8",
+        borderColor:     "#3788d8"
+      };
+      await addEvent(newEvt);
       calendar.unselect();
     },
     eventClick: info => {
-      console.log('▶️ eventClick', info.event);
+      // ouvre la modal pour éditer
       currentEvt = info.event;
       fldTitle.value = currentEvt.title;
       fldStart.value = currentEvt.start.toISOString().slice(0,16);
-      fldEnd.value   = currentEvt.end
-                        ? currentEvt.end.toISOString().slice(0,16)
-                        : currentEvt.start.toISOString().slice(0,16);
-      fldColor.value = currentEvt.backgroundColor || '#3788d8';
+      fldEnd.value   = (currentEvt.end||currentEvt.start).toISOString().slice(0,16);
+      fldColor.value = currentEvt.backgroundColor || "#3788d8";
       bsModal.show();
     }
   });
 
   calendar.render();
-  console.log('✅ FullCalendar rendu');
 
-  // Sauvegarde et mise à jour stockage
-  function saveEvents() {
-    localStorage.setItem('events', JSON.stringify(events));
-    console.log('💾 events sauvegardés', events);
-  }
+  // 5) Synchronisation Firestore → FullCalendar
+  subscribeEvents(evts => {
+    calendar.removeAllEvents();
+    evts.forEach(e => {
+      calendar.addEvent({
+        id: e.id,
+        title: e.title,
+        start: e.start,
+        end:   e.end,
+        backgroundColor: e.backgroundColor,
+        borderColor:     e.borderColor
+      });
+    });
+  });
 
-  // Enregistre les modifications depuis la modal
-  btnSave.addEventListener('click', () => {
+  // 6) Édition depuis la modal
+  btnSave.addEventListener("click", async () => {
     if (!currentEvt) return;
-    console.log('✏️ save-event', {
-      title: fldTitle.value,
+    const updates = {
+      title: fldTitle.value.trim(),
       start: fldStart.value,
       end:   fldEnd.value,
-      color: fldColor.value
-    });
-    currentEvt.setProp('title', fldTitle.value.trim() || currentEvt.title);
-    currentEvt.setStart(fldStart.value);
-    currentEvt.setEnd(fldEnd.value);
-    const col = fldColor.value;
-    currentEvt.setProp('backgroundColor', col);
-    currentEvt.setProp('borderColor', col);
-
-    const idx = events.findIndex(e => e.id == currentEvt.id);
-    if (idx > -1) {
-      events[idx] = {
-        id:              currentEvt.id,
-        title:           currentEvt.title,
-        start:           currentEvt.start.toISOString(),
-        end:             currentEvt.end ? currentEvt.end.toISOString() : null,
-        backgroundColor: col,
-        borderColor:     col
-      };
-      saveEvents();
-    }
+      backgroundColor: fldColor.value,
+      borderColor:     fldColor.value
+    };
+    await updateEvent(currentEvt.id, updates);
     bsModal.hide();
   });
 
-  // Supprime un événement depuis la modal
-  btnDel.addEventListener('click', () => {
+  // 7) Suppression depuis la modal
+  btnDel.addEventListener("click", async () => {
     if (!currentEvt) return;
-    if (!confirm(`Supprimer "${currentEvt.title}" ?`)) return;
-    console.log('🗑 delete-event', currentEvt.id);
-    currentEvt.remove();
-    const idx = events.findIndex(e => e.id == currentEvt.id);
-    if (idx > -1) {
-      events.splice(idx, 1);
-      saveEvents();
+    if (confirm(`Supprimer "${currentEvt.title}" ?`)) {
+      await removeEvent(currentEvt.id);
+      bsModal.hide();
     }
-    bsModal.hide();
   });
-}
-
-// Pour le dashboard
-export function getEvents() {
-  return JSON.parse(localStorage.getItem('events') || '[]');
 }
