@@ -1,4 +1,36 @@
 // js/budget.js
+// js/budget.js
+import {
+  db,
+  collection,
+  doc,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc
+} from "./firebase.js";
+
+const budgetCol = collection(db, "budget");
+
+export function subscribeBudget(cb) {
+  return onSnapshot(budgetCol, snap => {
+    const entries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    cb(entries);
+  });
+}
+
+// data = { desc, amount, type }
+export function addBudget(data) {
+  return addDoc(budgetCol, { ...data, createdAt: Date.now() });
+}
+
+export function updateBudget(id, updates) {
+  return updateDoc(doc(db, "budget", id), updates);
+}
+
+export function removeBudget(id) {
+  return deleteDoc(doc(db, "budget", id));
+}
 
 /**
  * Module Finances – Budget
