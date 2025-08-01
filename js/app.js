@@ -19,6 +19,15 @@ if ('serviceWorker' in navigator) {
     .catch(err => console.error('Erreur SW :', err));
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+  // Au bout de 2.5s (durée de l'animation), on supprime l'overlay du DOM
+  setTimeout(() => {
+    const splash = document.getElementById('splash-overlay');
+    if (splash) splash.remove();
+  }, 2500);
+});
+
+
 // 3) Initialisation générale au chargement du DOM
 document.addEventListener('DOMContentLoaded', () => {
   // 3.1) Initialiser tous les modules fonctionnels
