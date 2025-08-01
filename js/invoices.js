@@ -1,4 +1,36 @@
 // js/invoices.js
+// js/invoices.js
+import {
+  db,
+  collection,
+  doc,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc
+} from "./firebase.js";
+
+const invoicesCol = collection(db, "invoices");
+
+export function subscribeInvoices(cb) {
+  return onSnapshot(invoicesCol, snap => {
+    const invs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    cb(invs);
+  });
+}
+
+// data = { date, amount, paid }
+export function addInvoice(data) {
+  return addDoc(invoicesCol, { ...data, createdAt: Date.now() });
+}
+
+export function updateInvoice(id, updates) {
+  return updateDoc(doc(db, "invoices", id), updates);
+}
+
+export function removeInvoice(id) {
+  return deleteDoc(doc(db, "invoices", id));
+}
 
 /**
  * Module Factures
