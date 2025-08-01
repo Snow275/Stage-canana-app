@@ -1,6 +1,40 @@
 import { getTasks, saveTask }     from './tasks.js';
 import { getBudgetData }          from './budget.js';
 import { getInvoices }            from './invoices.js';
+import { subscribeTasks, addTask, removeTask } from "./tasks.js";
+
+export function initDashboard() {
+  const form = document.getElementById("dash-task-form");
+  const input = document.getElementById("dash-task-input");
+  const list  = document.getElementById("dashboard-tasks");
+
+  // Affichage initial + mise à jour en temps réel
+  subscribeTasks(tasks => {
+    list.innerHTML = "";
+    tasks
+      .sort((a,b)=> b.createdAt - a.createdAt)
+      .slice(0,3)
+      .forEach(t => {
+        const li = document.createElement("li");
+        li.className = "list-group-item d-flex justify-content-between";
+        li.textContent = t.text;
+        const btn = document.createElement("button");
+        btn.className = "btn btn-sm btn-danger";
+        btn.textContent = "✖";
+        btn.onclick = () => removeTask(t.id);
+        li.appendChild(btn);
+        list.appendChild(li);
+      });
+  });
+
+  // Soumission du formulaire
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    const txt = input.value.trim();
+    if (!txt) return;
+    addTask(txt).then(() => input.value = "");
+  });
+}
 
 
 const WEATHER_API_KEY = '600c8b2ce3f1613f3936612c9bbc42ff';
