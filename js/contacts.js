@@ -1,4 +1,36 @@
 // js/contacts.js
+// js/contacts.js
+import {
+  db,
+  collection,
+  doc,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc
+} from "./firebase.js";
+
+const contactsCol = collection(db, "contacts");
+
+export function subscribeContacts(cb) {
+  return onSnapshot(contactsCol, snap => {
+    const contacts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    cb(contacts);
+  });
+}
+
+// data = { name, email, phone }
+export function addContact(data) {
+  return addDoc(contactsCol, { ...data, createdAt: Date.now() });
+}
+
+export function updateContact(id, updates) {
+  return updateDoc(doc(db, "contacts", id), updates);
+}
+
+export function removeContact(id) {
+  return deleteDoc(doc(db, "contacts", id));
+}
 
 /**
  * Module Contacts
