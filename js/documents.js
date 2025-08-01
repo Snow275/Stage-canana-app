@@ -1,4 +1,32 @@
 // js/documents.js
+// js/documents.js
+import {
+  db,
+  collection,
+  doc,
+  onSnapshot,
+  addDoc,
+  deleteDoc
+} from "./firebase.js";
+
+const docsCol = collection(db, "documents");
+
+export function subscribeDocuments(cb) {
+  return onSnapshot(docsCol, snap => {
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    cb(docs);
+  });
+}
+
+// data = { name, url }  (url = URL du fichier uploadé)
+export function addDocument(data) {
+  return addDoc(docsCol, { ...data, createdAt: Date.now() });
+}
+
+export function removeDocument(id) {
+  return deleteDoc(doc(db, "documents", id));
+}
+
 
 export function initDocuments() {
   const upload = document.getElementById('doc-upload');
