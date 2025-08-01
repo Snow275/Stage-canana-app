@@ -1,4 +1,34 @@
 // js/tasks.js
+// js/tasks.js
+import {
+  db,
+  collection,
+  doc,
+  onSnapshot,
+  addDoc,
+  deleteDoc
+} from "./firebase.js";
+
+const tasksCol = collection(db, "tasks");
+
+// 1) Écoute temps réel des tâches
+export function subscribeTasks(callback) {
+  return onSnapshot(tasksCol, snapshot => {
+    const tasks = [];
+    snapshot.forEach(d => tasks.push({ id: d.id, ...d.data() }));
+    callback(tasks);
+  });
+}
+
+// 2) Ajouter une tâche
+export function addTask(text) {
+  return addDoc(tasksCol, { text, createdAt: Date.now() });
+}
+
+// 3) Supprimer une tâche
+export function removeTask(id) {
+  return deleteDoc(doc(db, "tasks", id));
+}
 
 /**
  * Module Tâches & To-Do
