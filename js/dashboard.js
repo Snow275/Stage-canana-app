@@ -1,3 +1,42 @@
+// js/dashboard.js
+import { subscribeTasks, addTask, removeTask }   from './tasks.js';
+import { subscribeBudget }   from './budget.js';
+import { subscribeInvoices } from './invoices.js';
+import { subscribeDishes }    from './dishes.js';
+import { subscribeContacts }  from './contacts.js';
+
+export function initDashboard() {
+  // Tâches urgentes
+  const taskList = document.getElementById('dashboard-tasks');
+  subscribeTasks(tasks => {
+    taskList.innerHTML = '';
+    tasks.sort((a,b)=> b.createdAt - a.createdAt)
+         .slice(0,3)
+         .forEach(t => {
+      const li = document.createElement('li');
+      li.className = 'list-group-item d-flex justify-content-between';
+      li.textContent = t.text;
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-sm btn-danger';
+      btn.textContent = '✖';
+      btn.onclick = () => removeTask(t.id);
+      li.append(btn);
+      taskList.append(li);
+    });
+  });
+  document.getElementById('dash-task-form')
+    .addEventListener('submit', e => {
+      e.preventDefault();
+      const txt = document.getElementById('dash-task-input').value.trim();
+      if (txt) addTask(txt).then(()=>
+        document.getElementById('dash-task-input').value = ''
+      );
+    });
+
+  // Budget, Factures, etc.  →  abonne-toi de la même façon avec subscribeBudget(), subscribeInvoices(), etc.
+}
+
+
 import { getTasks, saveTask }     from './tasks.js';
 import { getBudgetData }          from './budget.js';
 import { getInvoices }            from './invoices.js';
@@ -97,3 +136,4 @@ export function initDashboard() {
   updateBudgetChart();
   renderInvoices();
 }
+
