@@ -1,4 +1,36 @@
 // js/courses.js
+// js/courses.js
+import {
+  db,
+  collection,
+  doc,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc
+} from "./firebase.js";
+
+const coursesCol = collection(db, "courses");
+
+export function subscribeCourses(cb) {
+  return onSnapshot(coursesCol, snap => {
+    const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    cb(items);
+  });
+}
+
+// data = { text, done }
+export function addCourse(data) {
+  return addDoc(coursesCol, { ...data, createdAt: Date.now() });
+}
+
+export function updateCourse(id, updates) {
+  return updateDoc(doc(db, "courses", id), updates);
+}
+
+export function removeCourse(id) {
+  return deleteDoc(doc(db, "courses", id));
+}
 
 /**
  * Module Courses / Packing List
