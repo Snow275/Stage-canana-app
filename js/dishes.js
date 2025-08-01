@@ -1,4 +1,28 @@
 // js/dishes.js
+// js/dishes.js
+import { gun } from './gundb.js';
+
+const col = gun.get('dishes');
+
+export function subscribeDishes(cb) {
+  col.map().on((data, id) => {
+    col.once(all => {
+      const arr = Object.entries(all || {})
+        .filter(([k,v]) => v && !v.deleted)
+        .map(([k,v]) => ({ id: k, ...v }));
+      cb(arr);
+    });
+  });
+}
+
+export function addDish(name) {
+  return col.set({ name, createdAt: Date.now() });
+}
+
+export function removeDish(id) {
+  return col.get(id).put({ deleted: true });
+}
+
 
 export function initDishes() {
   const form   = document.getElementById('dish-form');
@@ -68,3 +92,4 @@ export function initDishes() {
     return div.innerHTML;
   }
 }
+
