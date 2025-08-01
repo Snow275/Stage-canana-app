@@ -1,11 +1,39 @@
 // js/contacts.js
+import {
+  db,
+  collection,
+  doc,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc
+} from "./firebase.js";
+
+const contactsCol = collection(db, "contacts");
+
+// Écoute temps réel
+export function subscribeContacts(cb) {
+  return onSnapshot(contactsCol, snap => {
+    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    cb(list);
+  });
+}
+
+// Opérations CRUD
+export function addContact(data) {
+  return addDoc(contactsCol, { ...data, createdAt: Date.now() });
+}
+export function updateContact(id, updates) {
+  return updateDoc(doc(db, "contacts", id), updates);
+}
+export function deleteContact(id) {
+  return deleteDoc(doc(db, "contacts", id));
+}
 
 /**
- * Module Contacts
+ * Module Contacts – UI
  */
 export function initContacts() {
-  console.log('⚙️ initContacts() démarré');
-
   const form   = document.getElementById('contact-form');
   const nameI  = document.getElementById('contact-name');
   const mailI  = document.getElementById('contact-email');
@@ -13,74 +41,61 @@ export function initContacts() {
   const list   = document.getElementById('contact-list');
   const btnExp = document.getElementById('export-contacts');
 
-  console.log('→ form ?', form, 'fields:', nameI, mailI, phoneI, 'list:', list, 'btnExp:', btnExp);
-  if (!form || !nameI || !mailI || !phoneI || !list || !btnExp) {
-    console.error('❌ Un élément contact est introuvable !');
-    return;
-  }
+  let editId = null;
 
-  let contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
-  let editId   = null;
-  console.log('→ contacts chargés', contacts);
+  // Abonnement Firestore
+  subscribeContacts(contacts => {
+    list.innerHTML = "";
+    contacts.forEach(c => renderContact(c));
+  });
 
-  // Affiche existants
-  contacts.forEach(renderContact);
-
-  // Soumission
   form.addEventListener('submit', e => {
     e.preventDefault();
     const name  = nameI.value.trim();
     const email = mailI.value.trim();
     const phone = phoneI.value.trim();
-    console.log('📥 submit contact', { name, email, phone, editId });
-    if (!name || !email || !phone) {
-      alert('Tous les champs sont requis');
-      return;
-    }
+    if (!name || !email || !phone) return;
 
     if (editId) {
-      const idx = contacts.findIndex(c => c.id === editId);
-      contacts[idx] = { id: editId, name, email, phone };
-      editId = null;
-      form.querySelector('button').textContent = 'OK';
-      list.innerHTML = '';
-      contacts.forEach(renderContact);
+      updateContact(editId, { name, email, phone })
+        .then(() => { editId = null; form.querySelector('button').textContent = 'OK'; form.reset(); });
     } else {
-      const c = { id: Date.now(), name, email, phone };
-      contacts.push(c);
-      renderContact(c);
+      addContact({ name, email, phone })
+        .then(() => form.reset());
     }
-    saveAll();
-    form.reset();
   });
 
-  // Export
   btnExp.addEventListener('click', () => {
-    console.log('📤 export contacts');
-    if (!contacts.length) return alert('Aucun contact à exporter !');
-    const header = 'id,nom,email,telephone';
-    const rows   = contacts.map(c => `${c.id},"${c.name.replace(/"/g,'""')}",${c.email},"${c.phone}"`);
-    downloadCSV('contacts.csv', [header, ...rows].join('\n'));
+    subscribeContacts(contacts => {
+      if (!contacts.length) return alert('Aucun contact à exporter !');
+      const header = 'id,nom,email,telephone';
+      const rows   = contacts.map(c =>
+        `${c.id},"${c.name.replace(/"/g,'""')}",${c.email},"${c.phone}"`
+      );
+      const csv = [header, ...rows].join('\n');
+      const a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+      a.download = 'contacts.csv';
+      a.click();
+    });
   });
 
   function renderContact(c) {
-    console.log('🖊 renderContact', c);
     const li = document.createElement('li');
     li.className = 'list-group-item d-flex justify-content-between align-items-center';
     li.innerHTML = `
       <div>
-        <strong>${escapeHtml(c.name)}</strong><br>
-        <small>${escapeHtml(c.email)}</small><br>
-        <small>📞 ${escapeHtml(c.phone)}</small>
+        <strong>${c.name}</strong><br>
+        <small>${c.email}</small><br>
+        <small>📞 ${c.phone}</small>
       </div>
       <div>
-        <button class="btn btn-sm btn-outline-warning me-1" title="Modifier">✏️</button>
-        <button class="btn btn-sm btn-outline-danger"  title="Supprimer">❌</button>
+        <button class="btn btn-sm btn-outline-warning me-1">✏️</button>
+        <button class="btn btn-sm btn-outline-danger">❌</button>
       </div>
     `;
     const [btnEdit, btnDel] = li.querySelectorAll('button');
     btnEdit.onclick = () => {
-      console.log('✏️ modifier', c.id);
       editId = c.id;
       nameI.value  = c.name;
       mailI.value  = c.email;
@@ -88,41 +103,10 @@ export function initContacts() {
       form.querySelector('button').textContent = 'Modifier';
     };
     btnDel.onclick = () => {
-      console.log('🗑 supprimer', c.id);
-      if (!confirm('Supprimer ce contact ?')) return;
-      contacts = contacts.filter(x => x.id !== c.id);
-      saveAll();
-      li.remove();
-      if (editId === c.id) {
-        editId = null;
-        form.reset();
-        form.querySelector('button').textContent = 'OK';
+      if (confirm('Supprimer ce contact ?')) {
+        deleteContact(c.id);
       }
     };
     list.appendChild(li);
   }
-
-  function saveAll() {
-    console.log('💾 saveAll contacts', contacts);
-    localStorage.setItem('contacts', JSON.stringify(contacts));
-  }
-
-  function downloadCSV(filename, text) {
-    const a = document.createElement('a');
-    a.href     = 'data:text/csv;charset=utf-8,' + encodeURIComponent(text);
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
-
-  function escapeHtml(s) {
-    const div = document.createElement('div');
-    div.textContent = s;
-    return div.innerHTML;
-  }
-}
-
-export function getContacts() {
-  return JSON.parse(localStorage.getItem('contacts') || '[]');
 }
