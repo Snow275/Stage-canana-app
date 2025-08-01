@@ -1,78 +1,4 @@
 // js/calendar.js
-// js/calendar.js
-import { gun } from './gundb.js';
-
-export function initCalendar() {
-  const calendarEl = document.getElementById('calendar');
-  const modalEl    = document.getElementById('eventModal');
-  const bsModal    = new bootstrap.Modal(modalEl);
-  const fldTitle   = modalEl.querySelector('#modal-title');
-  const fldStart   = modalEl.querySelector('#modal-start');
-  const fldEnd     = modalEl.querySelector('#modal-end');
-  const fldColor   = modalEl.querySelector('#modal-color');
-  const btnSave    = modalEl.querySelector('#save-event');
-  const btnDel     = modalEl.querySelector('#delete-event');
-
-  const eventsDB = gun.get('events');
-  let events     = [];
-
-  // Abonnement en temps réel
-  eventsDB.map().on((data, id) => {
-    eventsDB.once(all => {
-      events = Object.entries(all || {})
-        .filter(([k,v]) => v && !v.deleted)
-        .map(([k,v]) => ({ id: k, ...v }));
-      calendar.removeAllEvents();
-      events.forEach(e => calendar.addEvent(e));
-    });
-  });
-
-  const calendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: 'dayGridMonth',
-    locale: 'fr',
-    selectable: true,
-    editable: true,
-    events: [],
-    select: info => {
-      const title = prompt('Titre de l’événement ?');
-      if (title) {
-        const ev = {
-          title,
-          start: info.startStr,
-          end:   info.endStr || info.startStr,
-          backgroundColor: '#3788d8',
-          borderColor:     '#3788d8'
-        };
-        eventsDB.set(ev);
-      }
-      calendar.unselect();
-    },
-    eventClick: info => {
-      const ev = info.event;
-      fldTitle.value = ev.title;
-      fldStart.value = ev.startStr;
-      fldEnd.value   = ev.endStr || ev.startStr;
-      fldColor.value = ev.backgroundColor;
-      bsModal.show();
-      btnSave.onclick = () => {
-        eventsDB.get(ev.id).put({
-          title: fldTitle.value,
-          start: fldStart.value,
-          end:   fldEnd.value,
-          backgroundColor: fldColor.value,
-          borderColor:     fldColor.value
-        });
-        bsModal.hide();
-      };
-      btnDel.onclick = () => {
-        eventsDB.get(ev.id).put({ deleted: true });
-        bsModal.hide();
-      };
-    }
-  });
-
-  calendar.render();
-}
 
 /**
  * Module Calendrier
@@ -211,4 +137,3 @@ export function initCalendar() {
 export function getEvents() {
   return JSON.parse(localStorage.getItem('events') || '[]');
 }
-

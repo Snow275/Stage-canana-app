@@ -1,31 +1,4 @@
 // js/contacts.js
-// js/contacts.js
-import { gun } from './gundb.js';
-
-const col = gun.get('contacts');
-
-export function subscribeContacts(cb) {
-  col.map().on((data, id) => {
-    col.once(all => {
-      const arr = Object.entries(all || {})
-        .filter(([k,v]) => v && !v.deleted)
-        .map(([k,v]) => ({ id: k, ...v }));
-      cb(arr);
-    });
-  });
-}
-
-export function addContact({ name, email, phone }) {
-  return col.set({ name, email, phone, createdAt: Date.now() });
-}
-
-export function updateContact(id, updates) {
-  return col.get(id).put(updates);
-}
-
-export function removeContact(id) {
-  return col.get(id).put({ deleted: true });
-}
 
 /**
  * Module Contacts
@@ -153,4 +126,3 @@ export function initContacts() {
 export function getContacts() {
   return JSON.parse(localStorage.getItem('contacts') || '[]');
 }
-

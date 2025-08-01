@@ -1,32 +1,4 @@
 // js/budget.js
-// js/budget.js
-import { gun } from './gundb.js';
-
-const col = gun.get('budget');
-
-export function subscribeBudget(cb) {
-  col.map().on((data, id) => {
-    col.once(all => {
-      const arr = Object.entries(all || {})
-        .filter(([k,v]) => v && !v.deleted)
-        .map(([k,v]) => ({ id: k, ...v }));
-      cb(arr);
-    });
-  });
-}
-
-export function addBudget({ desc, amount, type }) {
-  return col.set({ desc, amount, type, createdAt: Date.now() });
-}
-
-export function updateBudget(id, updates) {
-  return col.get(id).put(updates);
-}
-
-export function removeBudget(id) {
-  return col.get(id).put({ deleted: true });
-}
-
 
 /**
  * Module Finances – Budget
@@ -200,6 +172,3 @@ export function addEntry(entry) {
   arr.push({ id: Date.now(), ...entry });
   localStorage.setItem('budget', JSON.stringify(arr));
 }
-
-
-

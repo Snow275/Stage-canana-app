@@ -1,32 +1,4 @@
 // js/documents.js
-// js/documents.js
-import { gun } from './gundb.js';
-
-const col = gun.get('documents');
-
-export function subscribeDocuments(cb) {
-  col.map().on((data, id) => {
-    col.once(all => {
-      const arr = Object.entries(all || {})
-        .filter(([k,v]) => v && !v.deleted)
-        .map(([k,v]) => ({ id: k, ...v }));
-      cb(arr);
-    });
-  });
-}
-
-export function addDocument({ name, url }) {
-  return col.set({ name, url, createdAt: Date.now() });
-}
-
-export function renameDocument(id, name) {
-  return col.get(id).put({ name });
-}
-
-export function removeDocument(id) {
-  return col.get(id).put({ deleted: true });
-}
-
 
 export function initDocuments() {
   const upload = document.getElementById('doc-upload');
@@ -103,4 +75,3 @@ export function initDocuments() {
     return div.innerHTML;
   }
 }
-

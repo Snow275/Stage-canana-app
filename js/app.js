@@ -1,56 +1,62 @@
 // js/app.js
-import './gundb.js';              // initialise Gun
-import { subscribeTasks, addTask }    from './tasks.js';
-import { initCalendar }               from './calendar.js';  // calendar.js gère déjà Gun en interne
-import { subscribeContacts }          from './contacts.js';
-import { subscribeBudget }            from './budget.js';
-import { subscribeCourses }           from './courses.js';
-import { subscribeDishes }            from './dishes.js';
-import { subscribeInvoices }          from './invoices.js';
-import { subscribeDocuments }         from './documents.js';
 
+// 1) Imports des modules
+import { initTasks }     from './tasks.js';
+import { initCalendar }  from './calendar.js';
+import { initContacts }  from './contacts.js';
+import { initBudget }    from './budget.js';
+import { initCourses }   from './courses.js';
+import { initDishes }    from './dishes.js';
+import { initInvoices }  from './invoices.js';
+import { initDocuments } from './documents.js';
+import { initDashboard } from './dashboard.js';
+
+// 2) Enregistrement du Service Worker pour la PWA
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker
     .register('/sw.js')
-    .then(() => console.log('SW enregistré'))
-    .catch(console.error);
+    .then(() => console.log('Service Worker enregistré ✅'))
+    .catch(err => console.error('Erreur SW :', err));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  // — Dashboard tâches —
-  const taskList = document.getElementById('dashboard-tasks');
-  subscribeTasks(tasks => {
-    taskList.innerHTML = '';
-    tasks
-      .sort((a,b)=> b.createdAt - a.createdAt)
-      .slice(0,3)
-      .forEach(t => {
-        const li = document.createElement('li');
-        li.className = 'list-group-item d-flex justify-content-between';
-        li.textContent = t.text;
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-sm btn-danger';
-        btn.textContent = '✖';
-        btn.onclick = () => removeTask(t.id);
-        li.append(btn);
-        taskList.append(li);
+  // Au bout de 2.5s (durée de l'animation), on supprime l'overlay du DOM
+  setTimeout(() => {
+    const splash = document.getElementById('splash-overlay');
+    if (splash) splash.remove();
+  }, 2500);
+});
+
+
+// 3) Initialisation générale au chargement du DOM
+document.addEventListener('DOMContentLoaded', () => {
+  // 3.1) Initialiser tous les modules fonctionnels
+  initTasks();
+  initCalendar();
+  initContacts();
+  initBudget();
+  initCourses();
+  initDishes();
+  initInvoices();
+  initDocuments();
+  initDashboard();
+
+  // 3.2) Mise en place de la navigation mobile (footer-nav)
+  const navButtons = document.querySelectorAll('#mobile-nav button');
+  if (navButtons.length) {
+    navButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        // Afficher l’onglet Bootstrap correspondant
+        const target = btn.getAttribute('data-bs-target');
+        const triggerEl = document.querySelector(`button[data-bs-target="${target}"]`);
+        new bootstrap.Tab(triggerEl).show();
+
+        // Gérer l’état "actif" du bouton
+        navButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
       });
-  });
-  document.getElementById('dash-task-form').addEventListener('submit', e => {
-    e.preventDefault();
-    const input = document.getElementById('dash-task-input');
-    const txt = input.value.trim();
-    if (txt) addTask(txt).then(() => input.value = '');
-  });
-
-  // — Calendrier —
-  initCalendar();  // affiche et synchronise en temps réel via Gun
-
-  // — Les autres modules en « subscribe » —
-  subscribeContacts(contacts => { /* mettre à jour #contact-list */ });
-  subscribeBudget(entries   => { /* MAJ #budget-list + graphique */ });
-  subscribeCourses(items   => { /* MAJ #course-list */ });
-  subscribeDishes(dishes   => { /* MAJ #dish-list */ });
-  subscribeInvoices(invs   => { /* MAJ #invoice-list */ });
-  subscribeDocuments(docs  => { /* MAJ #doc-list */ });
+    });
+    // Activer le premier bouton au démarrage
+    navButtons[0].classList.add('active');
+  }
 });

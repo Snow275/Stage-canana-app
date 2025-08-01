@@ -1,30 +1,4 @@
 // js/tasks.js
-// js/tasks.js
-import { gun } from './gundb.js';
-
-const tasksDB = gun.get('tasks');
-
-// 1) Abonnement temps réel
-export function subscribeTasks(cb) {
-  tasksDB.map().on((data, id) => {
-    tasksDB.once(all => {
-      const arr = Object.entries(all || {})
-        .filter(([k,v]) => v && !v.deleted)
-        .map(([k,v]) => ({ id: k, ...v }));
-      cb(arr);
-    });
-  });
-}
-
-// 2) Ajouter une tâche
-export function addTask(text) {
-  return tasksDB.set({ text, createdAt: Date.now() });
-}
-
-// 3) « suppression » (marquage supprimé)
-export function removeTask(id) {
-  gun.get('tasks').get(id).put({ deleted: true });
-}
 
 /**
  * Module Tâches & To-Do
@@ -160,4 +134,3 @@ export function saveTask(text) {
   tasks.push({ id: Date.now(), text });
   localStorage.setItem('tasks', JSON.stringify(tasks));
 }
-
