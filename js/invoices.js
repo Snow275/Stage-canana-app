@@ -1,6 +1,6 @@
 // js/invoices.js
-// js/invoices.js
-import {
+
+import { 
   db,
   collection,
   doc,
@@ -12,6 +12,7 @@ import {
 
 const invoicesCol = collection(db, "invoices");
 
+// Fonction pour s'abonner aux changements en temps réel
 export function subscribeInvoices(cb) {
   return onSnapshot(invoicesCol, snap => {
     const invs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -19,15 +20,18 @@ export function subscribeInvoices(cb) {
   });
 }
 
+// Ajout d'une facture
 // data = { date, amount, paid }
 export function addInvoice(data) {
   return addDoc(invoicesCol, { ...data, createdAt: Date.now() });
 }
 
+// Mise à jour d'une facture
 export function updateInvoice(id, updates) {
   return updateDoc(doc(db, "invoices", id), updates);
 }
 
+// Suppression d'une facture
 export function removeInvoice(id) {
   return deleteDoc(doc(db, "invoices", id));
 }
@@ -38,18 +42,16 @@ export function removeInvoice(id) {
 export function initInvoices() {
   console.log('⚙️ initInvoices() démarré');
 
-  const form  = document.getElementById('invoice-form');
+  const form = document.getElementById('invoice-form');
   const dateI = document.getElementById('invoice-date');
-  const amtI  = document.getElementById('invoice-amount');
-  const list  = document.getElementById('invoice-list');
+  const amtI = document.getElementById('invoice-amount');
+  const list = document.getElementById('invoice-list');
 
-  console.log('→ form ?', form, 'dateI ?', dateI, 'amtI ?', amtI, 'list ?', list);
   if (!form || !dateI || !amtI || !list) {
     console.error('❌ Un élément Invoices est introuvable !');
     return;
   }
 
-  // Charge les factures existantes
   let invs = JSON.parse(localStorage.getItem('invoices') || '[]');
   console.log('→ invoices chargées', invs);
   invs.forEach(renderInvoice);
@@ -58,10 +60,10 @@ export function initInvoices() {
   form.addEventListener('submit', e => {
     e.preventDefault();
     const inv = {
-      id:     Date.now(),
-      date:   dateI.value,
+      id: Date.now(),
+      date: dateI.value,
       amount: parseFloat(amtI.value),
-      paid:   false
+      paid: false
     };
     console.log('📥 submit invoice', inv);
     if (!inv.date || isNaN(inv.amount)) {
@@ -74,9 +76,8 @@ export function initInvoices() {
     form.reset();
   });
 
-  // Affiche une facture
+  // Affichage d'une facture
   function renderInvoice(inv) {
-    console.log('🖊 renderInvoice', inv);
     const li = document.createElement('li');
     li.className = 'list-group-item d-flex justify-content-between align-items-center';
     li.innerHTML = `
