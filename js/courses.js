@@ -1,4 +1,31 @@
 // js/courses.js
+// js/courses.js
+import { gun } from './gundb.js';
+
+const col = gun.get('courses');
+
+export function subscribeCourses(cb) {
+  col.map().on((data, id) => {
+    col.once(all => {
+      const arr = Object.entries(all || {})
+        .filter(([k,v]) => v && !v.deleted)
+        .map(([k,v]) => ({ id: k, ...v }));
+      cb(arr);
+    });
+  });
+}
+
+export function addCourse(text) {
+  return col.set({ text, done: false, createdAt: Date.now() });
+}
+
+export function toggleCourse(id, done) {
+  return col.get(id).put({ done });
+}
+
+export function removeCourse(id) {
+  return col.get(id).put({ deleted: true });
+}
 
 /**
  * Module Courses / Packing List
@@ -95,3 +122,4 @@ export function initCourses() {
     return d.innerHTML;
   }
 }
+
