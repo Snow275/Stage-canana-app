@@ -1,3 +1,4 @@
+import { gun } from './gundb.js';
 // js/budget.js
 
 /**
@@ -172,3 +173,4 @@ export function addEntry(entry) {
   arr.push({ id: Date.now(), ...entry });
   localStorage.setItem('budget', JSON.stringify(arr));
 }
+
