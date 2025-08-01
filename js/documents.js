@@ -1,62 +1,77 @@
 // js/documents.js
-import {
-  db,
-  collection,
-  doc,
-  onSnapshot,
-  addDoc,
-  deleteDoc
-} from "./firebase.js";
-
-const docsCol = collection(db, "documents");
-
-export function subscribeDocuments(cb) {
-  return onSnapshot(docsCol, snap => {
-    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    cb(docs);
-  });
-}
-export function addDocument(data) {
-  return addDoc(docsCol, { ...data, createdAt: Date.now() });
-}
-export function deleteDocument(id) {
-  return deleteDoc(doc(db, "documents", id));
-}
 
 export function initDocuments() {
   const upload = document.getElementById('doc-upload');
   const list   = document.getElementById('doc-list');
 
-  subscribeDocuments(docs => {
-    list.innerHTML = "";
-    docs.forEach(renderDoc);
-  });
+  // Charge l’existant
+  let docs = JSON.parse(localStorage.getItem('documents') || '[]');
+  docs.forEach(renderDoc);
 
+  // Écoute de l’upload
   upload.addEventListener('change', e => {
     for (const file of e.target.files) {
       const reader = new FileReader();
       reader.onload = () => {
-        addDocument({ name: file.name, url: reader.result });
+        const doc = {
+          id:   Date.now() + Math.random(),
+          name: file.name,
+          data: reader.result
+        };
+        docs.push(doc);
+        save();
+        renderDoc(doc);
       };
       reader.readAsDataURL(file);
     }
     upload.value = '';
   });
 
+  // Affiche un élément de la liste
   function renderDoc(doc) {
     const li = document.createElement('li');
     li.className = 'list-group-item d-flex justify-content-between align-items-center';
     li.innerHTML = `
-      <a href="${doc.url}" download="${doc.name}">${doc.name}</a>
-      <div class="btn-group btn-group-sm">
-        <button class="btn btn-outline-primary">✏️</button>
-        <button class="btn btn-outline-danger">❌</button>
-      </div>`;
-    li.querySelector('.btn-outline-primary').onclick = () => {
-      const newName = prompt('Nouveau nom:', doc.name);
-      if (newName) updateDoc(doc(db, 'documents', doc.id), { name: newName });
+      <a href="${doc.data}" download="${doc.name}" class="flex-grow-1 text-truncate">
+        ${escapeHtml(doc.name)}
+      </a>
+      <div class="btn-group btn-group-sm ms-3">
+        <button class="btn btn-outline-primary" title="Renommer">✏️</button>
+        <button class="btn btn-outline-danger"  title="Supprimer">❌</button>
+      </div>
+    `;
+
+    // Renommer
+    li.querySelector('[title="Renommer"]').onclick = () => {
+      const nouv = prompt('Nouveau nom du document :', doc.name);
+      if (nouv && nouv.trim()) {
+        doc.name = nouv.trim();
+        save();
+        // Met à jour le lien dans l’UI
+        const a = li.querySelector('a');
+        a.textContent = doc.name;
+        a.setAttribute('download', doc.name);
+      }
     };
-    li.querySelector('.btn-outline-danger').onclick = () => deleteDocument(doc.id);
+
+    // Supprimer
+    li.querySelector('[title="Supprimer"]').onclick = () => {
+      if (!confirm(`Supprimer "${doc.name}" ?`)) return;
+      docs = docs.filter(d => d.id !== doc.id);
+      save();
+      li.remove();
+    };
+
     list.appendChild(li);
+  }
+
+  function save() {
+    localStorage.setItem('documents', JSON.stringify(docs));
+  }
+
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
   }
 }

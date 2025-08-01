@@ -1,66 +1,99 @@
-// js/dashboard.js
-import { subscribeTasks, deleteTask } from './tasks.js';
-import { subscribeEvents }            from './calendar.js';
-import { subscribeBudget }            from './budget.js';
-import { subscribeInvoices }          from './invoices.js';
+import { getTasks, saveTask }     from './tasks.js';
+import { getBudgetData }          from './budget.js';
+import { getInvoices }            from './invoices.js';
+
+
+const WEATHER_API_KEY = '600c8b2ce3f1613f3936612c9bbc42ff';
 
 export function initDashboard() {
-  const taskList = document.getElementById('dashboard-tasks');
-  const nextEvt  = document.getElementById('dashboard-next-event');
-  const budCtx   = document.getElementById('dashboard-budget-chart').getContext('2d');
-  const invList  = document.getElementById('dashboard-invoices');
+  // Références DOM
+  const taskForm   = document.getElementById('dash-task-form');
+  const taskInput  = document.getElementById('dash-task-input');
+  const taskList   = document.getElementById('dashboard-tasks');
+  const budCtx     = document.getElementById('dashboard-budget-chart').getContext('2d');
+  const invList    = document.getElementById('dashboard-invoices');
 
   // A) Tâches urgentes
-  subscribeTasks(tasks => {
-    taskList.innerHTML = "";
-    tasks
-      .sort((a,b)=> b.createdAt - a.createdAt)
-      .slice(0,3)
-      .forEach(t => {
-        const li = document.createElement('li');
-        li.className = 'list-group-item d-flex justify-content-between';
-        li.textContent = t.text;
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-sm btn-danger';
-        btn.textContent = '✖';
-        btn.onclick = () => deleteTask(t.id);
-        li.appendChild(btn);
-        taskList.appendChild(li);
-      });
+  function renderTasks() {
+    taskList.innerHTML = '';
+    getTasks().slice(-3).reverse().forEach(t => {
+      const li = document.createElement('li');
+      li.className = 'list-group-item';
+      li.textContent = t.text;
+      taskList.appendChild(li);
+    });
+  }
+  taskForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const text = taskInput.value.trim();
+    if (!text) return;
+    saveTask(text);
+    taskInput.value = '';
+    renderTasks();
   });
 
-  // B) Prochain événement
-  subscribeEvents(evts => {
-    const up = evts.filter(e=>new Date(e.start)>=new Date())
-                   .sort((a,b)=>new Date(a.start)-new Date(b.start));
-    nextEvt.textContent = up.length
-      ? `${up[0].title} le ${new Date(up[0].start).toLocaleDateString()}`
-      : '—';
-  });
-
-  // C) Budget
-  let budgetChart;
-  subscribeBudget(entries => {
-    const sums = entries.reduce((a,e)=>{a[e.type]=(a[e.type]||0)+e.amount;return a;},{});
-    const data = { labels:Object.keys(sums), datasets:[{data:Object.values(sums),backgroundColor:['#dc3545','#198754']}]};
-    if (!budgetChart) {
-      budgetChart = new Chart(budCtx, { type:'doughnut', data, options:{maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}} });
-    } else {
-      budgetChart.data = data;
-      budgetChart.update();
+  // B) Météo en temps réel
+  function renderWeather() {
+    const container = document.getElementById('dashboard-weather');
+    if (!navigator.geolocation) {
+      container.textContent = 'Géolocalisation non supportée.';
+      return;
     }
-  });
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const { latitude: lat, longitude: lon } = pos.coords;
+      try {
+        const resp = await fetch(
+          `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}` +
+          `&units=metric&lang=fr&appid=${WEATHER_API_KEY}`
+        );
+        if (!resp.ok) throw new Error('Erreur API météo');
+        const data = await resp.json();
+        const { temp } = data.main;
+        const { description, icon } = data.weather[0];
+        const iconUrl = `https://openweathermap.org/img/wn/${icon}@2x.png`;
+        container.innerHTML = `
+          <img src="${iconUrl}" alt="${description}" style="width:60px;height:60px; margin-right:10px;">
+          <div>
+            <strong>${temp.toFixed(1)}°C</strong><br>
+            <small style="text-transform:capitalize;">${description}</small>
+          </div>
+        `;
+      } catch {
+        container.textContent = 'Erreur chargement météo.';
+      }
+    }, () => {
+      container.textContent = 'Autorisation géoloc. refusée.';
+    });
+  }
 
-  // D) Factures
-  subscribeInvoices(invs => {
-    invList.innerHTML = "";
-    invs.filter(i=>!i.paid)
-        .sort((a,b)=>new Date(a.date)-new Date(b.date))
-        .forEach(i=>{
-          const li = document.createElement('li');
-          li.className = 'list-group-item';
-          li.textContent = `${i.date} – ${i.amount.toFixed(2)}€`;
-          invList.appendChild(li);
-        });
+  // C) Budget (récap)
+  const budChart = new Chart(budCtx, {
+    type: 'doughnut',
+    data: getBudgetData(),
+    options: { maintainAspectRatio: false, plugins: { legend:{position:'bottom'} } }
   });
+  function updateBudgetChart() {
+    budChart.data = getBudgetData();
+    budChart.update();
+  }
+
+  // D) Factures à venir
+  function renderInvoices() {
+    invList.innerHTML = '';
+    getInvoices()
+      .filter(i => !i.paid)
+      .sort((a,b)=> new Date(a.date) - new Date(b.date))
+      .forEach(i => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.textContent = `${i.date} – ${i.amount.toFixed(2)}€`;
+        invList.appendChild(li);
+      });
+  }
+
+  // Initialisation
+  renderTasks();
+  renderWeather();    
+  updateBudgetChart();
+  renderInvoices();
 }
