@@ -1,4 +1,32 @@
 // js/invoices.js
+// js/invoices.js
+import { gun } from './gundb.js';
+
+const col = gun.get('invoices');
+
+export function subscribeInvoices(cb) {
+  col.map().on((data, id) => {
+    col.once(all => {
+      const arr = Object.entries(all || {})
+        .filter(([k,v]) => v && !v.deleted)
+        .map(([k,v]) => ({ id: k, ...v }));
+      cb(arr);
+    });
+  });
+}
+
+export function addInvoice({ date, amount }) {
+  return col.set({ date, amount, paid: false, createdAt: Date.now() });
+}
+
+export function toggleInvoice(id, paid) {
+  return col.get(id).put({ paid });
+}
+
+export function removeInvoice(id) {
+  return col.get(id).put({ deleted: true });
+}
+
 
 /**
  * Module Factures
@@ -90,3 +118,4 @@ export function initInvoices() {
 export function getInvoices() {
   return JSON.parse(localStorage.getItem('invoices') || '[]');
 }
+
