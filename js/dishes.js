@@ -1,4 +1,37 @@
 // js/dishes.js
+// js/dishes.js
+import {
+  db,
+  collection,
+  doc,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc
+} from "./firebase.js";
+
+const dishesCol = collection(db, "dishes");
+
+export function subscribeDishes(cb) {
+  return onSnapshot(dishesCol, snap => {
+    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    cb(list);
+  });
+}
+
+// data = { name }
+export function addDish(data) {
+  return addDoc(dishesCol, { ...data, createdAt: Date.now() });
+}
+
+export function updateDish(id, updates) {
+  return updateDoc(doc(db, "dishes", id), updates);
+}
+
+export function removeDish(id) {
+  return deleteDoc(doc(db, "dishes", id));
+}
+
 
 export function initDishes() {
   const form   = document.getElementById('dish-form');
