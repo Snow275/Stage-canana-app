@@ -139,4 +139,10 @@ export function initCalendar() {
       bsModal.hide();
     }
   });
+
+  // Pour le dashboard
+export function getEvents() {
+  return JSON.parse(localStorage.getItem('events') || '[]');
+}
+
 }
