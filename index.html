@@ -343,12 +343,13 @@
 <!-- Tes modules locaux (version globale, sans export/import) -->
 <script src="js/tasks.js"></script>
 <script src="js/courses.js"></script>
-
+<script src="js/contacts.js"></script>
 <script>
   // Initialisation quand la page est prête
   window.addEventListener("DOMContentLoaded", () => {
     if (window.initTasks) window.initTasks();
     if (window.initCourses) window.initCourses();
+    if (window.initContacts) window.initContcts();
   });
 
   // Fix pour resize du calendrier quand onglet Préparation s’affiche
@@ -421,6 +422,7 @@
   
 </body>
 </html>
+
 
 
 
