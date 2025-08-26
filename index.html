@@ -366,6 +366,25 @@ navigator.serviceWorker.register('/sw.js')
 }
 </script>
 
+<script>
+// Gérer affichage du bandeau offline
+function updateOnlineStatus() {
+  const banner = document.getElementById('offline-banner');
+  if (navigator.onLine) {
+    banner.style.display = 'none';
+  } else {
+    banner.style.display = 'block';
+  }
+}
+
+// Détection auto
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+
+// Vérifie dès le départ
+window.addEventListener('DOMContentLoaded', updateOnlineStatus);
+</script>
+
 <!-- Barre de navigation mobile -->
 <nav id="mobile-nav">
 <button data-bs-toggle="pill" data-bs-target="#dashboard" aria-label="Tableau de bord">🏠</button>
@@ -424,7 +443,22 @@ navigator.serviceWorker.register('/sw.js')
 </script>
 
 </body>
+
+  <!-- Bandeau Offline -->
+<div id="offline-banner" style="
+  display:none;
+  position:fixed;
+  top:0; left:0; right:0;
+  background:#ff4d4d;
+  color:white;
+  text-align:center;
+  padding:8px;
+  font-size:14px;
+  z-index:2000;">
+  📴 Vous êtes hors ligne — affichage en mode local
+</div>
 </html>
+
 
 
 
