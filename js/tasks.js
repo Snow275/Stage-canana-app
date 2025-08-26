@@ -3,29 +3,6 @@
 /**
  * Module Tâches & To-Do
  */
-import { getTasks, addTask, toggleTask, deleteTask } from "./backendless.js";
-
-async function refreshTasks() {
-  try {
-    const tasks = await getTasks();
-    console.log("Tâches:", tasks);
-    // ici tu peux mettre à jour ton HTML / DOM
-  } catch (e) {
-    console.error(e);
-  }
-}
-
-document.querySelector("#addTaskBtn").addEventListener("click", async () => {
-  const input = document.querySelector("#taskInput");
-  const titre = input.value.trim();
-  if (!titre) return;
-  await addTask(titre);
-  input.value = "";
-  await refreshTasks();
-});
-
-// appelle refresh au démarrage
-refreshTasks();
 
 export function initTasks() {
   const form        = document.getElementById('task-form');
@@ -158,4 +135,5 @@ export function saveTask(text) {
   tasks.push({ id: Date.now(), text });
   localStorage.setItem('tasks', JSON.stringify(tasks));
 }
+
 
