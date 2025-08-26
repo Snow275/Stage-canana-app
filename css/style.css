@@ -104,3 +104,22 @@ body {
   0%,  80% { opacity: 1; }
   100%     { opacity: 0; visibility: hidden; }
 }
+
+<style>
+  /* Assure que la barre mobile est au-dessus et cliquable */
+  #mobile-nav{
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    display: flex; justify-content: space-around; gap: 8px;
+    padding: .6rem .75rem;
+    background: #fff;
+    border-top: 1px solid rgba(0,0,0,.1);
+    z-index: 1030; /* > contenu */
+  }
+  #mobile-nav button{
+    background: transparent; border: 0; 
+    font-size: 1.25rem; line-height: 1; 
+  }
+  /* évite que la barre recouvre le contenu */
+  body { padding-bottom: 64px; }
+</style>
