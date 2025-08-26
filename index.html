@@ -266,6 +266,14 @@ if ('serviceWorker' in navigator) {
 })();
 </script>
 
+<script>
+document.addEventListener('submit', (e) => {
+  // empêcher Bootstrap de faire "switch tab" sur submit
+  e.stopPropagation();
+}, true);
+</script>
+  
 </body>
 </html>
+
 
