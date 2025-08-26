@@ -376,9 +376,56 @@ navigator.serviceWorker.register('/sw.js')
 <button data-bs-toggle="pill" data-bs-target="#documents" aria-label="Documents">📂</button>
 </nav>
 
+  
+
+<script>
+  (function () {
+    // 1) Sécurise le "type" pour éviter un submit par défaut
+    document.querySelectorAll('#mobile-nav [data-bs-target]').forEach(btn => {
+      btn.setAttribute('type', 'button');
+    });
+    document.querySelectorAll('#sidebar [data-bs-toggle="pill"]').forEach(btn => {
+      btn.setAttribute('type', 'button');
+    });
+
+    // 2) Fonction pour afficher un onglet
+    function showTab(targetSelector) {
+      // On essaye via l’API Bootstrap (en passant par le bouton "officiel" de la sidebar)
+      const sidebarTrigger = document.querySelector(`#sidebar [data-bs-target="${targetSelector}"]`);
+      if (window.bootstrap && sidebarTrigger) {
+        const tab = new bootstrap.Tab(sidebarTrigger);
+        tab.show();
+        return;
+      }
+      // Fallback manuel si Bootstrap pas dispo/planté
+      document.querySelectorAll('.tab-pane').forEach(p => {
+        p.classList.remove('show', 'active');
+      });
+      const pane = document.querySelector(targetSelector);
+      if (pane) pane.classList.add('show', 'active');
+    }
+
+    // 3) Clics sur la barre mobile : on force l’ouverture de l’onglet
+    document.querySelectorAll('#mobile-nav [data-bs-target]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const target = btn.getAttribute('data-bs-target');
+        showTab(target);
+      });
+    });
+
+    // 4) Bonus : quand on montre l’onglet Préparation, on retrig le resize (calendrier)
+    document.querySelectorAll('[data-bs-target="#preparation"]').forEach(btn => {
+      btn.addEventListener('shown.bs.tab', () => {
+        window.dispatchEvent(new Event('resize'));
+      });
+    });
+  })();
+</script>
 
 </body>
 </html>
+
 
 
 
