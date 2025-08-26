@@ -4,6 +4,8 @@ import { getInvoices }            from './invoices.js';
 
 
 const WEATHER_API_KEY = '600c8b2ce3f1613f3936612c9bbc42ff';
+const WEATHER_CACHE_KEY = 'lastWeather';
+const GEO_OPTS = { enableHighAccuracy: false, timeout: 8000, maximumAge: 30 * 60 * 1000 };
 
 export function initDashboard() {
   // Références DOM
@@ -34,37 +36,85 @@ export function initDashboard() {
 
   // B) Météo en temps réel
   function renderWeather() {
-    const container = document.getElementById('dashboard-weather');
-    if (!navigator.geolocation) {
-      container.textContent = 'Géolocalisation non supportée.';
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(async pos => {
-      const { latitude: lat, longitude: lon } = pos.coords;
-      try {
-        const resp = await fetch(
-          `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}` +
-          `&units=metric&lang=fr&appid=${WEATHER_API_KEY}`
-        );
-        if (!resp.ok) throw new Error('Erreur API météo');
-        const data = await resp.json();
-        const { temp } = data.main;
-        const { description, icon } = data.weather[0];
+  const container = document.getElementById('dashboard-weather');
+
+  // Helpers
+  const showFromCache = (fallbackMsg) => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(WEATHER_CACHE_KEY) || 'null');
+      if (cached) {
+        const { temp, description, icon } = cached;
         const iconUrl = `https://openweathermap.org/img/wn/${icon}@2x.png`;
         container.innerHTML = `
-          <img src="${iconUrl}" alt="${description}" style="width:60px;height:60px; margin-right:10px;">
-          <div>
-            <strong>${temp.toFixed(1)}°C</strong><br>
-            <small style="text-transform:capitalize;">${description}</small>
+          <div class="d-flex align-items-center">
+            <img src="${iconUrl}" alt="${description}" style="width:60px;height:60px; margin-right:10px;">
+            <div>
+              <strong>${temp.toFixed(1)}°C</strong><br>
+              <small style="text-transform:capitalize;">${description}</small>
+              <div><span class="badge bg-secondary mt-1">données en cache</span></div>
+            </div>
           </div>
         `;
-      } catch {
-        container.textContent = 'Erreur chargement météo.';
+        return true;
       }
-    }, () => {
-      container.textContent = 'Autorisation géoloc. refusée.';
-    });
+    } catch {}
+    container.textContent = fallbackMsg;
+    return false;
+  };
+
+  const saveCache = (data) => {
+    try { localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(data)); } catch {}
+  };
+
+  // Hors-ligne → on tente le cache
+  if (!navigator.onLine) {
+    showFromCache('Pas de connexion pour la météo.');
+    return;
   }
+
+  if (!navigator.geolocation) {
+    // Pas de géoloc → essaye cache
+    showFromCache('Géolocalisation non supportée.');
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const { latitude: lat, longitude: lon } = pos.coords;
+    try {
+      const resp = await fetch(
+        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${WEATHER_API_KEY}`
+      );
+      if (!resp.ok) throw new Error('Erreur API météo');
+      const data = await resp.json();
+      const payload = {
+        temp: data.main.temp,
+        description: data.weather?.[0]?.description || 'Météo',
+        icon: data.weather?.[0]?.icon || '01d'
+      };
+      // Affiche + cache
+      const iconUrl = `https://openweathermap.org/img/wn/${payload.icon}@2x.png`;
+      container.innerHTML = `
+        <img src="${iconUrl}" alt="${payload.description}" style="width:60px;height:60px; margin-right:10px;">
+        <div>
+          <strong>${payload.temp.toFixed(1)}°C</strong><br>
+          <small style="text-transform:capitalize;">${payload.description}</small>
+        </div>
+      `;
+      saveCache(payload);
+    } catch (err) {
+      // Erreur réseau/API → tente le cache
+      showFromCache('Erreur chargement météo.');
+    }
+  }, (err) => {
+    // Refus/timeout → tente le cache avec message adapté
+    const msg = (err && err.code === 1)
+      ? 'Autorisation géoloc. refusée.'
+      : (err && err.code === 3)
+        ? 'Géolocalisation trop lente (timeout).'
+        : 'Géolocalisation indisponible.';
+    showFromCache(msg);
+  }, GEO_OPTS);
+}
 
   // C) Budget (récap)
   const budChart = new Chart(budCtx, {
@@ -97,3 +147,4 @@ export function initDashboard() {
   updateBudgetChart();
   renderInvoices();
 }
+
