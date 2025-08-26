@@ -1,139 +1,142 @@
-// js/tasks.js
-
-/**
- * Module Tâches & To-Do
- */
+// === js/tasks.js ===
+// Module Tâches & To-Do (branché Backendless)
+import { listTasks, createTask, setArchived, removeTask } from "./backendless.js";
 
 export function initTasks() {
-  const form        = document.getElementById('task-form');
-  const input       = document.getElementById('task-input');
-  const list        = document.getElementById('task-list');
+  const form = document.getElementById('task-form');
+  const input = document.getElementById('task-input');
+  const list = document.getElementById('task-list');
   const archiveList = document.getElementById('archived-list');
-  const btnExp      = document.getElementById('export-tasks');
+  const btnExp = document.getElementById('export-tasks');
 
-  let tasks    = JSON.parse(localStorage.getItem('tasks')         || '[]');
-  let archived = JSON.parse(localStorage.getItem('archivedTasks') || '[]');
+  // États mémoire (pour export & rendu rapide)
+  let tasks = [];
+  let archived = [];
 
-  // Affichage initial
-  tasks.forEach(renderTask);
-  archived.forEach(renderArchived);
+  // ----- helpers UI -----
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
 
-  // Ajout de tâche
-  form.addEventListener('submit', e => {
-    e.preventDefault();
-    const txt = input.value.trim();
-    if (!txt) return;
-    const t = { id: Date.now(), text: txt };
-    tasks.push(t);
-    saveAll();
-    renderTask(t);
-    input.value = '';
-  });
-
-  // Export CSV
-  btnExp.addEventListener('click', () => {
-    if (!tasks.length) return alert('Aucune tâche à exporter !');
-    const header = 'id,texte';
-    const rows   = tasks.map(t => `${t.id},"${t.text.replace(/"/g,'""')}"`);
-    downloadCSV('tasks.csv', [header, ...rows].join('\n'));
-  });
-
-  // ——— Fonctions internes ———
+  function renderAll() {
+    list.innerHTML = '';
+    archiveList.innerHTML = '';
+    tasks.forEach(renderTask);
+    archived.forEach(renderArchived);
+  }
 
   function renderTask(t) {
     const li = document.createElement('li');
     li.className = 'list-group-item d-flex justify-content-between align-items-center';
+    li.dataset.id = t.objectId;
+
     li.innerHTML = `
       <span>${escapeHtml(t.text)}</span>
       <div>
         <button class="btn btn-sm btn-outline-success me-1" title="Terminer">✔️</button>
-        <button class="btn btn-sm btn-outline-danger"       title="Supprimer">❌</button>
+        <button class="btn btn-sm btn-outline-danger" title="Supprimer">❌</button>
       </div>
     `;
+
     const [btnDone, btnDel] = li.querySelectorAll('button');
-    btnDone.onclick = () => moveToArchive(t.id, li);
-    btnDel.onclick  = () => {
-      if (!confirm('Supprimer définitivement ?')) return;
-      tasks = tasks.filter(x => x.id !== t.id);
-      saveAll();
-      li.remove();
+
+    btnDone.onclick = async () => {
+      await setArchived(t.objectId, true);
+      await refresh();
     };
+
+    btnDel.onclick = async () => {
+      if (!confirm('Supprimer définitivement ?')) return;
+      await removeTask(t.objectId);
+      await refresh();
+    };
+
     list.appendChild(li);
   }
 
   function renderArchived(t) {
     const li = document.createElement('li');
     li.className = 'list-group-item list-group-item-light d-flex justify-content-between align-items-center';
+    li.dataset.id = t.objectId;
+
     li.innerHTML = `
       <span><s>${escapeHtml(t.text)}</s></span>
       <div>
         <button class="btn btn-sm btn-outline-primary me-1" title="Restaurer">↩️</button>
-        <button class="btn btn-sm btn-outline-danger"       title="Supprimer">❌</button>
+        <button class="btn btn-sm btn-outline-danger" title="Supprimer">❌</button>
       </div>
     `;
+
     const [btnRestore, btnDel] = li.querySelectorAll('button');
-    btnRestore.onclick = () => restoreFromArchive(t.id, li);
-    btnDel.onclick     = () => {
-      if (!confirm('Supprimer de l’archive ?')) return;
-      archived = archived.filter(x => x.id !== t.id);
-      saveAll();
-      li.remove();
+
+    btnRestore.onclick = async () => {
+      await setArchived(t.objectId, false);
+      await refresh();
     };
+
+    btnDel.onclick = async () => {
+      if (!confirm("Supprimer de l’archive ?")) return;
+      await removeTask(t.objectId);
+      await refresh();
+    };
+
     archiveList.appendChild(li);
   }
 
-  function moveToArchive(id, li) {
-    const idx = tasks.findIndex(t => t.id === id);
-    if (idx === -1) return;
-    const [t] = tasks.splice(idx, 1);
-    archived.push(t);
-    saveAll();
-    li.remove();
-    renderArchived(t);
+  // ----- Chargement depuis Backendless -----
+  async function refresh() {
+    try {
+      [tasks, archived] = await Promise.all([
+        listTasks({ archived: false }),
+        listTasks({ archived: true })
+      ]);
+      renderAll();
+    } catch (e) {
+      console.error(e);
+      alert("Erreur de synchro avec le serveur.");
+    }
   }
 
-  function restoreFromArchive(id, li) {
-    const idx = archived.findIndex(t => t.id === id);
-    if (idx === -1) return;
-    const [t] = archived.splice(idx, 1);
-    tasks.push(t);
-    saveAll();
-    li.remove();
-    renderTask(t);
-  }
+  // ----- Ajout -----
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const txt = input.value.trim();
+    if (!txt) return;
+    await createTask(txt);
+    input.value = '';
+    await refresh();
+  });
 
-  function saveAll() {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-    localStorage.setItem('archivedTasks', JSON.stringify(archived));
-  }
+  // ----- Export CSV (depuis l'état actuel) -----
+  btnExp.addEventListener('click', () => {
+    const all = [...tasks, ...archived];
+    if (!all.length) return alert('Aucune tâche à exporter !');
 
-  function downloadCSV(filename, text) {
+    const header = 'objectId,texte,archived';
+    const rows = all.map(t =>
+      `${t.objectId},"${String(t.text).replace(/"/g,'""')}",${t.archived ? 'true':'false'}`
+    );
+    const csv = [header, ...rows].join('\n');
+
     const a = document.createElement('a');
-    a.href     = 'data:text/csv;charset=utf-8,' + encodeURIComponent(text);
-    a.download = filename;
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'tasks.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-  }
+  });
 
-  function escapeHtml(s) {
-    const div = document.createElement('div');
-    div.textContent = s;
-    return div.innerHTML;
-  }
+  // Démarrage
+  refresh();
 }
 
-/**
- * Pour le Dashboard : récupération et ajout rapides
- */
-export function getTasks() {
-  return JSON.parse(localStorage.getItem('tasks') || '[]');
+// Pour le Dashboard : on lit depuis Backendless
+export async function getTasks() {
+  return listTasks({ archived: false });
 }
 
-export function saveTask(text) {
-  const tasks = getTasks();
-  tasks.push({ id: Date.now(), text });
-  localStorage.setItem('tasks', JSON.stringify(tasks));
+export async function saveTask(text) {
+  await createTask(text);
 }
-
-
