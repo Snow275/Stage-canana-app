@@ -8,8 +8,8 @@
 
 // ================================
 // BACKENDLESS >>> CONFIG (remplis si tu veux la synchro cloud)
-const BL_APP_ID_C = ""; // ex: "948A3DAD-06F1-4F45-BECA-XXXXXXXX"
-const BL_REST_KEY_C = ""; // ex: "4A7AA6A1-E3D7-4F93-87E6-XXXXXXXX"
+const BL_APP_ID_C = "948A3DAD-06F1-4F45-BECA-A039688312DD"; // ex: "948A3DAD-06F1-4F45-BECA-XXXXXXXX"
+const BL_REST_KEY_C = "8C69AAC6-204C-48CE-A60B-137706E8E183"; // ex: "4A7AA6A1-E3D7-4F93-87E6-XXXXXXXX"
 const BL_BASE_C = (BL_APP_ID_C && BL_REST_KEY_C)
   ? `https://api.backendless.com/${BL_APP_ID_C}/${BL_REST_KEY_C}/data/Contacts`
   : null;
@@ -223,3 +223,4 @@ window.getContacts = function(){
   if (BL_ON_C) return blListContacts(); // Promise
   return JSON.parse(localStorage.getItem('contacts') || '[]'); // sync
 };
+
