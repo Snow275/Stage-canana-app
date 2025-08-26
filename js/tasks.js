@@ -1,7 +1,3 @@
-// === js/tasks.js ===
-// Module Tâches & To-Do (branché Backendless)
-import { listTasks, createTask, setArchived, removeTask } from "./backendless.js";
-
 // js/tasks.js
 
 /**
@@ -139,3 +135,4 @@ export function saveTask(text) {
   tasks.push({ id: Date.now(), text });
   localStorage.setItem('tasks', JSON.stringify(tasks));
 }
+
