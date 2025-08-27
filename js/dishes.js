@@ -2,7 +2,7 @@
 
 // ⛳ RENSEIGNE TES CLÉS ↓↓↓
 const BL_APP_ID     = '948A3DAD-06F1-4F45-BECA-A039688312DD';
-const BL_REST_KEY   = '8C69AAC6-204C-48CE-A60B-137706E8E183';
+const BL_REST_KEY   = '4AA7AA61-E3D7-4F93-B766-23595F7F459C';
 const BL_API_URL    = 'https://api.backendless.com';
 const BL_TABLE      = 'Dishes';               // Table à créer côté Backendless
 const PAGE_SIZE     = 200;
@@ -219,4 +219,5 @@ function initDishes() {
 
 // Expose en global si tu inclus le script en <script src="js/dishes.js"></script>
 window.initDishes = initDishes;
+
 
