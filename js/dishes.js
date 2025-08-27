@@ -462,7 +462,7 @@ return div.innerHTML;
 
 }
 
-
+window.initDishes = initDishes;
 
 
 
@@ -470,6 +470,7 @@ return div.innerHTML;
 
 
 }
+
 
 
 
