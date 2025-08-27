@@ -345,12 +345,14 @@ Export CSV
 <!-- Tes modules locaux (version globale, sans export/import) -->
 <script src="js/tasks.js"></script>
 <script src="js/courses.js"></script>
+<script src="js/dishes.js"></script>
 
 <script>
 // Initialisation quand la page est prête
 window.addEventListener("DOMContentLoaded", () => {
 if (window.initTasks) window.initTasks();
 if (window.initCourses) window.initCourses();
+if (window.initDishes) window.initDishes();
 });
 
 // Fix pour resize du calendrier quand onglet Préparation s’affiche
@@ -458,6 +460,7 @@ window.addEventListener('DOMContentLoaded', updateOnlineStatus);
     Vous êtes hors ligne — affichage en mode local
 </div>
 </html>
+
 
 
 
