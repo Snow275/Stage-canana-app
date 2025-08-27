@@ -350,10 +350,11 @@ Export CSV
 <script>
 // Initialisation quand la page est prête
 window.addEventListener("DOMContentLoaded", () => {
-if (window.initTasks) window.initTasks();
-if (window.initCourses) window.initCourses();
-if (window.initDishes) window.initDishes();
+  try { window.initTasks && window.initTasks(); } catch(e){ console.error('initTasks KO', e); }
+  try { window.initCourses && window.initCourses(); } catch(e){ console.error('initCourses KO', e); }
+  try { window.initDishes && window.initDishes(); } catch(e){ console.error('initDishes KO', e); }
 });
+</script>
 
 // Fix pour resize du calendrier quand onglet Préparation s’affiche
 document.querySelector('button[data-bs-target="#preparation"]').addEventListener('shown.bs.tab', () => {
@@ -459,6 +460,7 @@ window.addEventListener('DOMContentLoaded', updateOnlineStatus);
 </div>
 </body>
 </html>
+
 
 
 
