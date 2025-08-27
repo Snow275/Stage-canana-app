@@ -1,5 +1,5 @@
 // sw.js — PWA offline avec fallback SPA
-const CACHE_NAME = 'stage-planner-v6';
+const CACHE_NAME = 'stage-planner-v7';
 
 // 👉 Liste tout ce dont l'UI a besoin pour s'ouvrir hors-ligne
 const APP_SHELL = [
@@ -71,5 +71,6 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
 
 
