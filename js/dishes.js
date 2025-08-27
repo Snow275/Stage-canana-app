@@ -62,6 +62,44 @@ export function initDishes() {
   // affichage initial
   dishes.forEach(renderDish);
 
+  // --- ⬇️⬇️ AJOUT : sync douce depuis Backendless (merge + refresh UI) ⬇️⬇️ ---
+  async function syncFromBackendless() {
+    if (!navigator.onLine) return;
+    try {
+      const remote = await blListDishes(); // [{objectId,text,localId?}, ...]
+      if (!Array.isArray(remote)) return;
+
+      const localMap = new Map(dishes.map(d => [d.objectId || d.id, d]));
+      let changed = false;
+
+      // Ajoute les entrées distantes manquantes
+      for (const r of remote) {
+        const key = r.objectId || r.localId;
+        if (!key) continue;
+        if (!localMap.has(key)) {
+          const item = { id: r.localId || Date.now(), text: r.text || '', objectId: r.objectId };
+          dishes.push(item);
+          localMap.set(key, item);
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        saveAll();
+        list.innerHTML = '';
+        dishes.forEach(d => renderDish(d));
+      }
+    } catch (e) {
+      console.warn('Sync Backendless KO (ignoré):', e);
+    }
+  }
+  // Lancer une première sync + petit polling
+  syncFromBackendless();
+  let _dishPoll = setInterval(syncFromBackendless, 6000);
+  window.addEventListener('online',  syncFromBackendless);
+  window.addEventListener('offline', () => { /* on laisse le polling, il ne fera rien hors-ligne */ });
+  // --- ⬆️⬆️ FIN AJOUT ⬆️⬆️ ---
+
   // ajout d’un plat
   form.addEventListener('submit', e => {
     e.preventDefault();
