@@ -14,10 +14,8 @@ const LS_KEY = 'dishes';
 const POLL_MS = 6000;
 
 // Headers communs pour Backendless
-const jsonHeaders = {
-  'Content-Type': 'application/json',
-  'Accept': 'application/json'
-};
+const JSON_HEADERS_GET  = { 'Accept': 'application/json' };
+const JSON_HEADERS_JSON = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
 
 // ===== API REST Backendless ==================================================
 async function blListDishes() {
@@ -219,6 +217,7 @@ function initDishes() {
 
 // Expose en global si tu inclus le script en <script src="js/dishes.js"></script>
 window.initDishes = initDishes;
+
 
 
 
