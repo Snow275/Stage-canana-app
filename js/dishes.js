@@ -12,22 +12,28 @@ const POLL_MS = 6000;
 const JSON_HEADERS_GET  = { Accept: 'application/json' };
 const JSON_HEADERS_JSON = { 'Content-Type': 'application/json', Accept: 'application/json' };
 
-// --- Backendless API
+// ===== API REST Backendless =====
 async function blListDishes() {
   const url = `${BL_API_URL}/${BL_APP_ID}/${BL_REST_KEY}/data/${BL_TABLE}?pageSize=${PAGE_SIZE}&sortBy=created%20desc`;
   const r = await fetch(url, { headers: JSON_HEADERS_GET });
   if (!r.ok) throw new Error('BL list');
   return r.json();
 }
+
 async function blCreateDish(payload) {
   const url = `${BL_API_URL}/${BL_APP_ID}/${BL_REST_KEY}/data/${BL_TABLE}`;
-  const r = await fetch(url, { method: 'POST', headers: JSON_HEADERS_JSON, body: JSON.stringify(payload) });
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: JSON_HEADERS_JSON,
+    body: JSON.stringify(payload)
+  });
   if (!r.ok) throw new Error('BL create');
   return r.json();
 }
+
 async function blDeleteDish(objectId) {
   const url = `${BL_API_URL}/${BL_APP_ID}/${BL_REST_KEY}/data/${BL_TABLE}/${encodeURIComponent(objectId)}`;
-  const r = await fetch(url, { method: 'DELETE', headers: JSON_HEADERS_GET });
+  const r = await fetch(url, { method: 'DELETE', headers: JSON_HEADERS_JSON });
   if (!r.ok) throw new Error('BL delete');
   return true;
 }
@@ -143,3 +149,4 @@ function initDishes(){
 }
 
 window.initDishes = initDishes;
+
