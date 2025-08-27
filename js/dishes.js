@@ -1,4 +1,4 @@
-// js/dishes.js — Dishes with Backendless sync + offline fallback
+// js/dishes.js — Dishes avec Backendless + fallback offline
 
 const BL_APP_ID   = '948A3DAD-06F1-4F45-BECA-A039688312DD';
 const BL_REST_KEY = '8C69AAC6-204C-48CE-A60B-137706E8E183';
@@ -16,7 +16,10 @@ const JSON_HEADERS_JSON = { 'Content-Type': 'application/json', Accept: 'applica
 async function blListDishes() {
   const url = `${BL_API_URL}/${BL_APP_ID}/${BL_REST_KEY}/data/${BL_TABLE}?pageSize=${PAGE_SIZE}&sortBy=created%20desc`;
   const r = await fetch(url, { headers: JSON_HEADERS_GET });
-  if (!r.ok) throw new Error('BL list');
+  if (!r.ok) {
+    console.error("❌ Erreur Backendless LIST", r.status, await r.text());
+    throw new Error('BL list');
+  }
   return r.json();
 }
 
@@ -27,24 +30,30 @@ async function blCreateDish(payload) {
     headers: JSON_HEADERS_JSON,
     body: JSON.stringify(payload)
   });
-  if (!r.ok) throw new Error('BL create');
+  if (!r.ok) {
+    console.error("❌ Erreur Backendless CREATE", r.status, await r.text());
+    throw new Error('BL create');
+  }
   return r.json();
 }
 
 async function blDeleteDish(objectId) {
   const url = `${BL_API_URL}/${BL_APP_ID}/${BL_REST_KEY}/data/${BL_TABLE}/${encodeURIComponent(objectId)}`;
   const r = await fetch(url, { method: 'DELETE', headers: JSON_HEADERS_JSON });
-  if (!r.ok) throw new Error('BL delete');
+  if (!r.ok) {
+    console.error("❌ Erreur Backendless DELETE", r.status, await r.text());
+    throw new Error('BL delete');
+  }
   return true;
 }
 
-// --- Local helpers
+// ===== Local helpers =====
 function loadLocal(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'[]'); }catch{ return []; } }
 function saveLocal(a){ try{ localStorage.setItem(LS_KEY, JSON.stringify(a)); }catch{} }
 function uid(){ return 'loc_'+Date.now()+'_'+Math.random().toString(36).slice(2,8); }
 function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
-// --- UI
+// ===== UI =====
 function renderOne(ul, dish, onDelete){
   const li=document.createElement('li');
   li.className='list-group-item d-flex justify-content-between align-items-center';
@@ -56,6 +65,7 @@ function renderOne(ul, dish, onDelete){
   ul.appendChild(li);
 }
 
+// ===== Public init =====
 function initDishes(){
   const form=document.getElementById('dish-form');
   const input=document.getElementById('dish-input');
@@ -63,9 +73,12 @@ function initDishes(){
   const btnExp=document.getElementById('export-dishes');
   if(!form||!input||!list||!btnExp) return;
 
+  // reset visuel
   let dishes=loadLocal();
-  list.innerHTML=''; dishes.forEach(d=>renderOne(list,d,handleDelete));
+  list.innerHTML='';
+  dishes.forEach(d=>renderOne(list,d,handleDelete));
 
+  // 1) Ajout
   form.addEventListener('submit', async e=>{
     e.preventDefault();
     const txt=input.value.trim(); if(!txt) return;
@@ -80,7 +93,7 @@ function initDishes(){
           const li=list.querySelector(`li[data-local-id="${dish.localId}"]`);
           if(li) li.dataset.objectId=created.objectId;
         }
-      }catch(err){ console.warn('Création BL échouée:',err); }
+      }catch(err){ console.warn('⚠️ Création BL échouée:',err); }
     }
   });
 
@@ -90,14 +103,17 @@ function initDishes(){
     if(list.firstChild) list.insertBefore(li,list.firstChild); else list.appendChild(li);
   }
 
+  // 2) Suppression
   async function handleDelete(dish, li){
     if(!confirm(`Supprimer "${dish.text}" ?`)) return;
     dishes=dishes.filter(x=>x.localId!==dish.localId); saveLocal(dishes); li.remove();
     if(dish.objectId && navigator.onLine) {
-      try{ await blDeleteDish(dish.objectId); }catch(err){ console.warn('Suppression BL échouée:',err); }
+      try{ await blDeleteDish(dish.objectId); }
+      catch(err){ console.warn('⚠️ Suppression BL échouée:',err); }
     }
   }
 
+  // 3) Export CSV
   btnExp.addEventListener('click', ()=>{
     if(!dishes.length) return alert('Aucun plat à exporter !');
     const header='id,text';
@@ -107,23 +123,21 @@ function initDishes(){
     a.download='dishes.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   });
 
+  // 4) Premier sync
   async function initialSync(){
     if(!navigator.onLine) return;
     try{
       const remote=await blListDishes();
-      const byKey=new Map(dishes.map(d=>[d.objectId||d.localId,d]));
-      remote.forEach(r=>{
-        const key=r.objectId||r.localId;
-        if(!byKey.has(key)){
-          const item={ localId:r.localId||uid(), objectId:r.objectId, text:r.text||'' };
-          dishes.push(item); renderTop(item);
-        }
-      });
+      console.log("✅ Backendless renvoie :", remote);
+      list.innerHTML='';
+      dishes = remote.map(r=>({ localId:r.localId||uid(), objectId:r.objectId, text:r.text||'' }));
+      dishes.forEach(d=>renderOne(list,d,handleDelete));
       saveLocal(dishes);
-    }catch(e){ console.warn('Initial BL sync KO:',e); }
+    }catch(e){ console.error('❌ Initial BL sync KO:',e); }
   }
   initialSync();
 
+  // 5) Polling
   let pollTimer=null;
   function startPolling(){
     stopPolling();
@@ -138,7 +152,7 @@ function initDishes(){
           dishes=next; saveLocal(dishes);
           list.innerHTML=''; dishes.forEach(d=>renderOne(list,d,handleDelete));
         }
-      }catch{}
+      }catch(e){ console.warn("⚠️ Polling BL échoué", e); }
     }, POLL_MS);
   }
   function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
@@ -149,4 +163,3 @@ function initDishes(){
 }
 
 window.initDishes = initDishes;
-
