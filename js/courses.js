@@ -146,6 +146,15 @@ export function initCourses() {
     }
   });
 
+
+  // ... après avoir ajouté l'item avec succès :
+if (Notification.permission === 'granted' && navigator.serviceWorker.controller) {
+  navigator.serviceWorker.controller.postMessage({
+    type: 'SHOW_NOTIFICATION',
+    title: 'Courses',
+    body: `"${txt}" ajouté à la liste.`
+  });
+
   // ---------- Export CSV ----------
   btnExp.addEventListener('click', async () => {
     if (BL_ON && !items.length) await refresh();
@@ -182,3 +191,4 @@ export function initCourses() {
   // ---------- Go ----------
   refresh();
 }
+
