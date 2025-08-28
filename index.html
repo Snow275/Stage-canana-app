@@ -568,27 +568,7 @@ window.addEventListener('DOMContentLoaded', askNotifPermission);
       return;
     }
 
-    // 3) Envoie une notif de test via le SW (méthode la plus fiable)
-    try {
-      await ready.showNotification('Test notifications ✅', {
-        body: 'Si tu vois ceci, les notifs sont OK.',
-        icon: '/icons/icon-192.png',
-        badge: '/icons/icon-192.png',
-        tag: 'test-notif-once',
-        renotify: false,
-        vibrate: [60, 20, 60]
-      });
-      console.log('[notif] test envoyé via SW.');
-    } catch (e) {
-      console.error('[notif] showNotification KO', e);
-      // Fallback direct (moins fiable)
-      try {
-        new Notification('Test notifications ✅', { body: 'Fallback direct depuis la page.' });
-        console.log('[notif] fallback new Notification() envoyé.');
-      } catch (e2) {
-        console.error('[notif] fallback KO', e2);
-      }
-    }
+
   } catch (e) {
     console.error('[notif] erreur globale', e);
   }
@@ -596,6 +576,7 @@ window.addEventListener('DOMContentLoaded', askNotifPermission);
 </script>
 </body>
 </html>
+
 
 
 
