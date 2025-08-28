@@ -1,0 +1,622 @@
+
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#2C3E50" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Stage Canada Planner</title>
+
+<!-- iOS PWA support -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Stage Planner CA" />
+<link rel="apple-touch-icon" href="/icons/icon-192.png" />
+
+<!-- Bootstrap 5 CSS -->
+<link
+href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+rel="stylesheet"
+/>
+<!-- FullCalendar CSS (URL corrigée) -->
+<link
+href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.4/index.global.min.css"
+rel="stylesheet"
+/>
+<!-- Ton style perso -->
+<link rel="stylesheet" href="css/style.css" />
+</head>
+
+
+<body class="d-flex">
+
+<!-- Sidebar -->
+<nav id="sidebar" class="bg-dark text-white p-3" style="width:250px;">
+<a href="#" class="d-flex align-items-center mb-3 text-white text-decoration-none">
+<span class="fs-4">Trip Planner 🇨🇦</span>
+</a>
+<hr class="text-secondary"/>
+<ul class="nav nav-pills flex-column mb-auto" role="tablist">
+<li class="nav-item" role="presentation">
+<button class="nav-link active text-white" data-bs-toggle="pill" data-bs-target="#dashboard" type="button" role="tab">
+🏠 Tableau de bord
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#preparation" type="button" role="tab">
+📝 Préparation
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#courses" type="button" role="tab">
+🛒 Courses
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#contacts" type="button" role="tab">
+👥 Contacts
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#finances" type="button" role="tab">
+💰 Finances
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#documents" type="button" role="tab">
+📂 Documents
+</button>
+</li>
+</ul>
+<hr class="text-secondary"/>
+<div class="text-center"><small>© 2025 Stage Planner</small></div>
+</nav>
+
+<!-- Main content -->
+<div class="tab-content flex-grow-1 p-4" style="overflow-y:auto; height:100vh;">
+
+<!-- … en amont, ton <nav> et le début du <div class="tab-content"> … -->
+
+<!-- 1) Tableau de bord -->
+<div class="tab-pane fade show active" id="dashboard" role="tabpanel">
+<h2>Tableau de bord</h2>
+<div class="row gy-4">
+
+<!-- A. Tâches urgentes -->
+<div class="col-md-6">
+<div class="card p-3">
+<h5>Tâches urgentes</h5>
+<form id="dash-task-form" class="d-flex mb-2">
+<input type="text" id="dash-task-input" class="form-control me-2" placeholder="Nouvelle tâche…" required>
+<button class="btn btn-primary btn-sm">Ajouter</button>
+</form>
+<ul id="dashboard-tasks" class="list-group"></ul>
+</div>
+</div>
+
+<!-- B. Météo actuelle -->
+<div class="col-md-6">
+<div class="card p-3">
+<h5>Météo actuelle</h5>
+<div id="dashboard-weather">Chargement météo…</div>
+</div>
+</div>
+
+<!-- C. Budget rapide -->
+<div class="col-md-6">
+<div class="card p-3">
+<h5>Budget ce mois</h5>
+<form id="dash-budget-form" class="row g-2 mb-3">
+<div class="col-5">
+<input type="text" id="dash-budget-desc" class="form-control form-control-sm" placeholder="Desc.…" required>
+</div>
+<div class="col-3">
+<input type="number" step="0.01" id="dash-budget-amount" class="form-control form-control-sm" placeholder="Montant" required>
+</div>
+<div class="col-2">
+<select id="dash-budget-type" class="form-select form-select-sm">
+<option value="depense">Dép.</option>
+<option value="revenu">Rev.</option>
+</select>
+</div>
+<div class="col-2 text-end">
+<button class="btn btn-success btn-sm">OK</button>
+</div>
+</form>
+<div id="dashboard-budget-container" style="height:150px;">
+<canvas id="dashboard-budget-chart"></canvas>
+</div>
+</div>
+</div>
+
+<!-- D. Factures à venir -->
+<div class="col-md-6">
+<div class="card p-3">
+<h5>Factures</h5>
+<ul id="dashboard-invoices" class="list-group"></ul>
+</div>
+</div>
+
+</div>
+</div>
+
+
+<!-- 2) Préparation -->
+<div class="tab-pane fade" id="preparation" role="tabpanel">
+<h2>Préparation</h2>
+<div class="row gy-4">
+
+<!-- Tâches & To-Do -->
+<div class="col-md-6">
+<div class="card">
+<div class="card-header">📝 Tâches & To-do</div>
+<div class="card-body" id="tasks-section">
+<form id="task-form" class="d-flex mb-3">
+<input
+type="text"
+id="task-input"
+class="form-control me-2"
+placeholder="Nouvelle tâche…"
+required
+/>
+<button class="btn btn-success">Ajouter</button>
+</form>
+<div class="d-flex justify-content-between align-items-center mb-2">
+<h6 class="mb-0">📝 En cours</h6>
+<button class="btn btn-outline-secondary btn-sm" id="export-tasks">
+Export CSV
+</button>
+</div>
+<ul id="task-list" class="list-group mb-4"></ul>
+<h6>📂 Archive des tâches</h6>
+<ul id="archived-list" class="list-group"></ul>
+</div>
+</div>
+</div>
+
+<!-- Calendrier (hauteur fixe pour FullCalendar) -->
+<div class="col-md-6">
+<div class="card h-100">
+<div class="card-header">📅 Calendrier</div>
+<div class="card-body p-0" id="calendar-section" style="height:600px;">
+<div id="calendar" style="height:100%;"></div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- Modal d’édition d’événement -->
+<div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title">Détails de l’événement</h5>
+<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+<label class="form-label">Titre</label>
+<input type="text" id="modal-title" class="form-control mb-2" />
+<label class="form-label">Début</label>
+<input type="datetime-local" id="modal-start" class="form-control mb-2" />
+<label class="form-label">Fin</label>
+<input type="datetime-local" id="modal-end" class="form-control mb-2" />
+<label class="form-label">Couleur</label>
+<input type="color" id="modal-color" class="form-control form-control-color mb-2" />
+</div>
+<div class="modal-footer">
+<button id="delete-event" class="btn btn-danger">Supprimer</button>
+<button id="save-event" class="btn btn-primary">Enregistrer</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 3) Courses -->
+<div class="tab-pane fade" id="courses" role="tabpanel">
+<h2>Courses / Packing List</h2>
+<div class="card">
+<div class="card-body">
+<form id="course-form" class="d-flex mb-3">
+<input id="course-input" type="text" class="form-control me-2" placeholder="Nouvel item…" required>
+<button class="btn btn-primary">Ajouter</button>
+</form>
+<ul id="course-list" class="list-group mb-3"></ul>
+<button id="export-courses" class="btn btn-outline-secondary btn-sm">Export CSV</button>
+
+<!-- Liste de plats -->
+<hr>
+<h5>🍽️ Liste de plats</h5>
+<form id="dish-form" class="d-flex mb-3">
+<input id="dish-input" type="text" class="form-control me-2" placeholder="Ajouter un plat…" required>
+<button type="submit" class="btn btn-success">Ajouter</button>
+</form>
+<ul id="dish-list" class="list-group mb-3"></ul>
+<button id="export-dishes" class="btn btn-outline-secondary btn-sm">Export CSV</button>
+</div>
+</div>
+</div>
+
+<!-- 4) Contacts -->
+<div class="tab-pane fade" id="contacts" role="tabpanel">
+<h2>Contacts</h2>
+<div class="card">
+<div class="card-body">
+<form id="contact-form" class="row g-2 mb-3">
+<div class="col-md-4">
+<input type="text" id="contact-name" class="form-control" placeholder="Nom" required>
+</div>
+<div class="col-md-4">
+<input type="email" id="contact-email" class="form-control" placeholder="Email" required>
+</div>
+<div class="col-md-3">
+<input type="tel" id="contact-phone" class="form-control" placeholder="Téléphone" pattern="[\d\s+()-]+" title="Chiffres, espaces, +, (), -" required>
+</div>
+<div class="col-md-1 text-end">
+<button type="submit" class="btn btn-success btn-sm">OK</button>
+</div>
+</form>
+<ul id="contact-list" class="list-group mb-3"></ul>
+<button id="export-contacts" class="btn btn-outline-secondary btn-sm">Export CSV</button>
+</div>
+</div>
+</div>
+
+<!-- 5) Finances -->
+<div class="tab-pane fade" id="finances" role="tabpanel">
+<h2>Finances</h2>
+<div class="card mb-4">
+<div class="card-body" id="budget-section">
+<form id="budget-form" class="row g-2 mb-3">
+<div class="col-5">
+<input type="text" id="budget-desc" class="form-control" placeholder="Description" required>
+</div>
+<div class="col-3">
+<input type="number" step="0.01" id="budget-amount" class="form-control" placeholder="Montant" required>
+</div>
+<div class="col-2">
+<select id="budget-type" class="form-select">
+<option value="depense">Dépense</option>
+<option value="revenu">Revenu</option>
+</select>
+</div>
+<div class="col-2 text-end">
+<button class="btn btn-success btn-sm">Ajouter</button>
+</div>
+</form>
+<ul id="budget-list" class="list-group mb-3"></ul>
+<div id="budget-chart-container" style="height:200px;">
+<canvas id="budget-chart"></canvas>
+</div>
+</div>
+</div>
+<div class="card">
+<div class="card-header">Factures</div>
+<div class="card-body">
+<form id="invoice-form" class="row g-2 mb-3">
+<div class="col-md-3">
+<input type="date" id="invoice-date" class="form-control" required>
+</div>
+<div class="col-md-3">
+<input type="number" step="0.01" id="invoice-amount" class="form-control" placeholder="Montant" required>
+</div>
+<div class="col-md-4">
+<input type="file" id="invoice-file" class="form-control" accept=".pdf,image/*">
+</div>
+<div class="col-md-2 text-end">
+<button type="submit" class="btn btn-success btn-sm">Ajouter</button>
+</div>
+</form>
+<ul id="invoice-list" class="list-group"></ul>
+</div>
+</div>
+</div>
+
+<!-- 6) Documents -->
+<div class="tab-pane fade" id="documents" role="tabpanel">
+<h2>Documents</h2>
+<div class="card">
+<div class="card-body">
+<input type="file" id="doc-upload" multiple class="form-control mb-3">
+<ul id="doc-list" class="list-group"></ul>
+</div>
+</div>
+</div>
+
+</div>
+
+<!-- JS Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.4/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- Firebase (si tu l’utilises encore) -->
+<script type="module" src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js"></script>
+<script type="module" src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js"></script>
+<script type="module" src="js/firebase.js"></script>
+<script type="module" src="js/app.js"></script>
+
+<!-- Gun (si utile à ton app) -->
+<script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+
+<!-- Tes modules locaux (version globale, sans export/import) -->
+<script src="js/tasks.js"></script>
+<script src="js/courses.js"></script>
+<script src="js/dishes.js"></script>
+
+<script>
+// Initialisation quand la page est prête
+window.addEventListener("DOMContentLoaded", () => {
+  try { window.initTasks && window.initTasks(); } catch(e){ console.error('initTasks KO', e); }
+  try { window.initCourses && window.initCourses(); } catch(e){ console.error('initCourses KO', e); }
+  try { window.initDishes && window.initDishes(); } catch(e){ console.error('initDishes KO', e); }
+});
+</script>
+
+<script>
+// Fix pour resize du calendrier quand onglet Préparation s’affiche
+document.querySelector('button[data-bs-target="#preparation"]').addEventListener('shown.bs.tab', () => {
+window.dispatchEvent(new Event('resize'));
+});
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+navigator.serviceWorker.register('/sw.js')
+.then(() => console.log('SW enregistré'))
+.catch(err => console.error('SW KO', err));
+}
+</script>
+
+<script>
+// Gérer affichage du bandeau offline
+function updateOnlineStatus() {
+  const banner = document.getElementById('offline-banner');
+  if (navigator.onLine) {
+    banner.style.display = 'none';
+  } else {
+    banner.style.display = 'block';
+  }
+}
+
+// Détection auto
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+
+// Vérifie dès le départ
+window.addEventListener('DOMContentLoaded', updateOnlineStatus);
+</script>
+
+<!-- Barre de navigation mobile -->
+<nav id="mobile-nav">
+<button data-bs-toggle="pill" data-bs-target="#dashboard" aria-label="Tableau de bord">🏠</button>
+<button data-bs-toggle="pill" data-bs-target="#preparation" aria-label="Préparation">📝</button>
+<button data-bs-toggle="pill" data-bs-target="#courses" aria-label="Courses">🛒</button>
+<button data-bs-toggle="pill" data-bs-target="#contacts" aria-label="Contacts">👥</button>
+<button data-bs-toggle="pill" data-bs-target="#finances" aria-label="Finances">💰</button>
+<button data-bs-toggle="pill" data-bs-target="#documents" aria-label="Documents">📂</button>
+</nav>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    for (let reg of regs) {
+      reg.update(); // force update du SW
+    }
+  });
+}
+</script>
+
+<script>  
+(function () {
+  // 1) Sécurise le "type" pour éviter un submit par défaut
+  document.querySelectorAll('#mobile-nav [data-bs-target]').forEach(btn => {
+    btn.setAttribute('type', 'button');
+  });
+  document.querySelectorAll('#sidebar [data-bs-toggle="pill"]').forEach(btn => {
+    btn.setAttribute('type', 'button');
+  });
+
+  // 2) Fonction pour afficher un onglet
+  function showTab(targetSelector) {
+    const sidebarTrigger = document.querySelector(`#sidebar [data-bs-target="${targetSelector}"]`);
+    if (window.bootstrap && sidebarTrigger) {
+      const tab = new bootstrap.Tab(sidebarTrigger);
+      tab.show();
+      return;
+    }
+    document.querySelectorAll('.tab-pane').forEach(p => {
+      p.classList.remove('show', 'active');
+    });
+    const pane = document.querySelector(targetSelector);
+    if (pane) pane.classList.add('show', 'active');
+  }
+
+  // 3) Clics sur la barre mobile
+  document.querySelectorAll('#mobile-nav [data-bs-target]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = btn.getAttribute('data-bs-target');
+      showTab(target);
+    });
+  });
+
+  // 4) Bonus : resize pour le calendrier
+  document.querySelectorAll('[data-bs-target="#preparation"]').forEach(btn => {
+    btn.addEventListener('shown.bs.tab', () => {
+      window.dispatchEvent(new Event('resize'));
+    });
+  });
+})();
+</script>
+
+<script>
+async function askNotifPermission() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+
+  if (Notification.permission === 'default') {
+    try { 
+      const result = await Notification.requestPermission();
+      console.log("Permission notif :", result);
+    } catch (err) {
+      console.warn("Permission notif refusée :", err);
+    }
+  } else {
+    console.log("Permission notif déjà :", Notification.permission);
+  }
+}
+window.addEventListener('DOMContentLoaded', askNotifPermission);
+</script>
+
+<script>
+async function fireWelcomeNotif() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification('Bienvenue 👋', {
+      body: 'Notifications actives pour Stage Planner ✨',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      vibrate: [80, 40, 80],
+      tag: 'welcome-once'
+    });
+  } catch (err) {
+    console.warn('Impossible d’afficher la notif :', err);
+  }
+}
+
+async function askNotifPermission() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    console.warn('Notifications non supportées par ce navigateur.');
+    return;
+  }
+
+  let status = Notification.permission;
+  if (status === 'default') {
+    try {
+      status = await Notification.requestPermission();
+      console.log('Permission notif :', status);
+    } catch (err) {
+      console.warn('Demande de permission KO :', err);
+    }
+  }
+
+  if (status === 'granted') {
+    setTimeout(fireWelcomeNotif, 300); // envoie une notif de bienvenue
+  } else {
+    console.log('Permission refusée ou bloquée :', status);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', askNotifPermission);
+</script>
+    
+
+  <!-- Bandeau Offline -->
+<div id="offline-banner" style="
+  display:none;
+  position:fixed;
+  top:0; left:0; right:0;
+  background:#ff4d4d;
+  color:white;
+  text-align:center;
+  padding:8px;
+  font-size:14px;
+  z-index:2000;">
+    Hors ligne — affichage en mode local
+</div>
+
+<script>
+(async function debugNotifications() {
+  try {
+    console.log('[notif] support:', 'Notification' in window, 'SW:' , 'serviceWorker' in navigator);
+
+    // 1) Vérifie/enregistre le SW puis attend qu’il soit prêt
+    if (!('serviceWorker' in navigator)) return;
+    let reg;
+    try {
+      // garde ton register('/sw.js') déjà présent, ce call re-utilise le même SW si déjà inscrit
+      reg = await navigator.serviceWorker.register('/sw.js');
+      console.log('[notif] sw register ok:', reg.scope);
+    } catch (e) {
+      console.error('[notif] sw register KO', e);
+      return;
+    }
+
+    const ready = await navigator.serviceWorker.ready;
+    console.log('[notif] sw ready:', !!ready);
+
+    // 2) Vérifie la permission
+    if (!('Notification' in window)) {
+      console.warn('[notif] API Notification non supportée');
+      return;
+    }
+
+    console.log('[notif] permission actuelle:', Notification.permission);
+    let perm = Notification.permission;
+    if (perm === 'default') {
+      try {
+        perm = await Notification.requestPermission();
+        console.log('[notif] permission après demande:', perm);
+      } catch (e) {
+        console.warn('[notif] requestPermission KO', e);
+      }
+    }
+    if (perm !== 'granted') {
+      console.warn('[notif] permission non accordée (', perm, ')');
+      return;
+    }
+
+    // 3) Envoie une notif de test via le SW (méthode la plus fiable)
+    try {
+      await ready.showNotification('Test notifications ✅', {
+        body: 'Si tu vois ceci, les notifs sont OK.',
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+        tag: 'test-notif-once',
+        renotify: false,
+        vibrate: [60, 20, 60]
+      });
+      console.log('[notif] test envoyé via SW.');
+    } catch (e) {
+      console.error('[notif] showNotification KO', e);
+      // Fallback direct (moins fiable)
+      try {
+        new Notification('Test notifications ✅', { body: 'Fallback direct depuis la page.' });
+        console.log('[notif] fallback new Notification() envoyé.');
+      } catch (e2) {
+        console.error('[notif] fallback KO', e2);
+      }
+    }
+  } catch (e) {
+    console.error('[notif] erreur globale', e);
+  }
+})();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
