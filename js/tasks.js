@@ -1,4 +1,4 @@
-/*** Module Tâches & To-Do — version debug sans filtre archived ***/
+  /*** Module Tâches & To-Do */
 
 // ================================
 // BACKENDLESS >>> CONFIG MINIMALE
@@ -9,7 +9,7 @@ const BL_BASE = (BL_APP_ID && BL_REST_KEY)
   : null;
 const BL_ON = !!BL_BASE;
 
-// identifiant unique par appareil
+// 🔑 identifiant unique par appareil
 const MY_DEVICE_ID = localStorage.getItem('myDeviceId') || (() => {
   const id = 'dev-' + Math.random().toString(36).slice(2);
   localStorage.setItem('myDeviceId', id);
@@ -26,13 +26,18 @@ async function notify(title, body) {
       await reg.showNotification(title, {
         body,
         icon: '/icons/icon-192.png',
-        badge: '/icons/icon-192.png'
+        badge: '/icons/icon-192.png',
+        silent: false,
+        tag: 'stage-planner-task',
+        renotify: false
       });
     }
   } catch (e) {
     console.warn('Notif KO:', e);
   }
 }
+
+const SHOULD_NOTIFY_ON_RENDER = false;
 
 async function blEnsureOK(res){
   if(!res.ok){
@@ -41,11 +46,19 @@ async function blEnsureOK(res){
   }
 }
 
-// 🚨 DEBUG : ici on enlève complètement le filtre
-async function blList(){
-  const res = await fetch(`${BL_BASE}?sortBy=created%20desc`);
+// ✅ NE FILTRE PAS sur archived=null (ça posait problème)
+async function blList(archived){
+  let q;
+  if (archived) {
+    q = "where=archived%3Dtrue&sortBy=created%20desc";
+  } else {
+    q = "where=archived%3Dfalse%20or%20archived%20is%20null%20or%20archived%20%3D%20NULL&sortBy=created%20desc";
+  }
+  const res = await fetch(`${BL_BASE}?${q}`);
   await blEnsureOK(res);
-  return res.json();
+  const data = await res.json();
+  console.log("📥 Backendless renvoie:", data); // debug
+  return data;
 }
 
 async function blCreate(text){
@@ -83,40 +96,75 @@ export function initTasks() {
   let archived = [];
 
   function renderTask(t) {
+    const text = t.text || t.texte || "(sans titre)"; // ✅ sécurité
     const li = document.createElement('li');
     li.className = 'list-group-item d-flex justify-content-between align-items-center';
-    li.innerHTML = `<span>${escapeHtml(t.text)}</span>
+    li.innerHTML = `<span>${escapeHtml(text)}</span>
       <div>
-        <button class="btn btn-sm btn-outline-success me-1">✔️</button>
-        <button class="btn btn-sm btn-outline-danger">❌</button>
+        <button class="btn btn-sm btn-outline-success me-1" title="Terminer">✔️</button>
+        <button class="btn btn-sm btn-outline-danger" title="Supprimer">❌</button>
       </div>`;
     const [btnDone, btnDel] = li.querySelectorAll('button');
 
     btnDone.onclick = async () => {
-      await blSetArchived(t.objectId, true);
-      await refresh();
+      if (BL_ON) {
+        await blSetArchived(t.objectId, true);
+        await refresh();
+      }
     };
     btnDel.onclick = async () => {
       if (!confirm('Supprimer définitivement ?')) return;
-      await blRemove(t.objectId);
-      await refresh();
+      if (BL_ON) {
+        await blRemove(t.objectId);
+        await refresh();
+      }
     };
 
     list.appendChild(li);
   }
 
+  function renderArchived(t) {
+    const text = t.text || t.texte || "(sans titre)";
+    const li = document.createElement('li');
+    li.className = 'list-group-item list-group-item-light d-flex justify-content-between align-items-center';
+    li.innerHTML = `<span><s>${escapeHtml(text)}</s></span>
+      <div>
+        <button class="btn btn-sm btn-outline-primary me-1" title="Restaurer">↩️</button>
+        <button class="btn btn-sm btn-outline-danger" title="Supprimer">❌</button>
+      </div>`;
+    const [btnRestore, btnDel] = li.querySelectorAll('button');
+
+    btnRestore.onclick = async () => {
+      if (BL_ON) {
+        await blSetArchived(t.objectId, false);
+        await refresh();
+      }
+    };
+    btnDel.onclick = async () => {
+      if (!confirm('Supprimer de l’archive ?')) return;
+      if (BL_ON) {
+        await blRemove(t.objectId);
+        await refresh();
+      }
+    };
+
+    archiveList.appendChild(li);
+  }
+
+  function escapeHtml(s) { const div = document.createElement('div'); div.textContent = s; return div.innerHTML; }
+
   function renderAll() {
-    list.innerHTML = '';
-    archiveList.innerHTML = '';
+    list.innerHTML = ''; archiveList.innerHTML = '';
     tasks.forEach(renderTask);
-    // on ignore archived ici volontairement pour debug
+    archived.forEach(renderArchived);
   }
 
   async function refresh() {
     if (BL_ON) {
-      tasks = await blList();
+      [tasks, archived] = await Promise.all([ blList(false), blList(true) ]);
     } else {
       tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+      archived = JSON.parse(localStorage.getItem('archivedTasks') || '[]');
     }
     renderAll();
   }
@@ -125,17 +173,22 @@ export function initTasks() {
     e.preventDefault();
     const txt = input.value.trim();
     if (!txt) return;
-    await blCreate(txt);
-    input.value = '';
-    await refresh();
+    if (BL_ON) {
+      await blCreate(txt);
+      input.value = '';
+      await refresh();
+    }
   });
 
   btnExp.addEventListener('click', async () => {
-    const data = tasks;
+    if (BL_ON && (!tasks.length && !archived.length)) {
+      await refresh();
+    }
+    const data = [...tasks, ...archived];
     if (!data.length) return alert('Aucune tâche à exporter !');
     const header = 'id_or_objectId,texte,archived,creatorDeviceId';
     const rows = data.map(t =>
-      `${(t.objectId || t.id)},"${String(t.text).replace(/"/g,'""')}",${t.archived || false},${t.creatorDeviceId||''}`
+      `${(t.objectId || t.id)},"${String(t.text || '').replace(/"/g,'""')}",${t.archived ? 'true':'false'},${t.creatorDeviceId||''}`
     );
     downloadCSV('tasks.csv', [header, ...rows].join('\n'));
   });
@@ -149,16 +202,6 @@ export function initTasks() {
     document.body.removeChild(a);
   }
 
-  function escapeHtml(s) { const div = document.createElement('div'); div.textContent = s; return div.innerHTML; }
-
   refresh();
   setInterval(refresh, 10000);
-}
-
-export function getTasks() {
-  if (BL_ON) return blList();
-  return JSON.parse(localStorage.getItem('tasks') || '[]');
-}
-export async function saveTask(text) {
-  await blCreate(text);
 }
