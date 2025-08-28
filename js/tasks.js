@@ -1,4 +1,4 @@
-        /*** Module Tâches & To-Do*/
+/*** Module Tâches & To-Do */
 
 // ================================
 // BACKENDLESS >>> CONFIG MINIMALE
@@ -46,7 +46,7 @@ async function blEnsureOK(res){
   }
 }
 
-// inclut archived=false ou null
+// ✅ inclut archived=false ou null
 async function blList(archived){
   let q;
   if (archived) {
@@ -68,6 +68,7 @@ async function blCreate(text){
   await blEnsureOK(res);
   return res.json();
 }
+
 async function blSetArchived(objectId, val){
   const res = await fetch(`${BL_BASE}/${objectId}`, {
     method:"PATCH", headers:{ "Content-Type":"application/json" },
@@ -76,6 +77,7 @@ async function blSetArchived(objectId, val){
   await blEnsureOK(res);
   return res.json();
 }
+
 async function blRemove(objectId){
   const res = await fetch(`${BL_BASE}/${objectId}`, { method:"DELETE" });
   await blEnsureOK(res);
@@ -93,7 +95,6 @@ export function initTasks() {
 
   let tasks = [];
   let archived = [];
-  // pour suivre la dernière liste et détecter les nouvelles
   let lastTaskIds = new Set();
 
   function renderTask(t) {
@@ -204,7 +205,7 @@ export function initTasks() {
       archived = JSON.parse(localStorage.getItem('archivedTasks') || '[]');
     }
 
-    // 🔔 détecte nouvelles tâches (celles qui n’étaient pas dans lastTaskIds)
+    // 🔔 détecte nouvelles tâches venant d’un autre appareil
     newTasks.forEach(t => {
       const id = t.objectId || t.id;
       if (!lastTaskIds.has(id) && t.creatorDeviceId && t.creatorDeviceId !== MY_DEVICE_ID) {
@@ -226,14 +227,13 @@ export function initTasks() {
     if (BL_ON) {
       await blCreate(txt);
       input.value = '';
-      await refresh(); // ⚠️ pas de notify ici, laissé au refresh
+      await refresh(); // pas de notify ici
     } else {
       const t = { id: Date.now(), text: txt, creatorDeviceId: MY_DEVICE_ID };
       tasks.push(t);
       saveAll();
       renderTask(t);
       input.value = '';
-      // pas de notify local
     }
   });
 
@@ -261,8 +261,7 @@ export function initTasks() {
   }
 
   refresh();
-  // (optionnel) refresh toutes les 10s
-  setInterval(refresh, 10000);
+  setInterval(refresh, 10000); // refresh toutes les 10s
 }
 
 /*** Pour le Dashboard : récupération et ajout rapides*/
@@ -273,7 +272,7 @@ export function getTasks() {
 export async function saveTask(text) {
   if (BL_ON) { 
     await blCreate(text); 
-    return; // ⚠️ pas de notify ici
+    return;
   }
   const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
   tasks.push({ id: Date.now(), text, creatorDeviceId: MY_DEVICE_ID });
