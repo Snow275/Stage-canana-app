@@ -1,4 +1,5 @@
-   /*** Module Tâches & To-Do*/
+// js/tasks.js
+/*** Module Tâches & To-Do */
 
 // ================================
 // BACKENDLESS >>> CONFIG MINIMALE
@@ -16,19 +17,15 @@ async function ensureNotifPermission() {
   if (Notification.permission === 'denied') return false;
   try {
     const perm = await Notification.requestPermission();
-    console.log('[tasks] permission notif =', perm);
     return perm === 'granted';
-  } catch (e) {
-    console.warn('[tasks] requestPermission KO', e);
+  } catch {
     return false;
   }
 }
-
 async function notify(title, body) {
   try {
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
     if (Notification.permission !== 'granted') return;
-
     const reg = await navigator.serviceWorker.ready;
     if (reg && reg.showNotification) {
       await reg.showNotification(title, {
@@ -46,9 +43,10 @@ async function notify(title, body) {
     console.warn('Notif KO:', e);
   }
 }
-
 const SHOULD_NOTIFY_ON_RENDER = false;
 
+// ================================
+// BACKENDLESS Helpers
 async function blEnsureOK(res){
   if(!res.ok){
     const txt = await res.text().catch(()=>res.statusText);
@@ -82,7 +80,6 @@ async function blRemove(objectId){
   await blEnsureOK(res);
   return true;
 }
-// BACKENDLESS <<<
 // ================================
 
 export function initTasks() {
@@ -98,6 +95,7 @@ export function initTasks() {
   // ---------- Affichage ----------
   function renderTask(t) {
     const li = document.createElement('li');
+    li.dataset.id = t.objectId || t.id; // 👈 garde l'id Backendless
     li.className = 'list-group-item d-flex justify-content-between align-items-center';
     li.innerHTML = `<span>${escapeHtml(t.text)}</span>
       <div>
@@ -106,10 +104,13 @@ export function initTasks() {
       </div>`;
     const [btnDone, btnDel] = li.querySelectorAll('button');
 
+    if (SHOULD_NOTIFY_ON_RENDER && typeof t.text === 'string') {
+      notify('Ajout dans la liste', t.text);
+    }
+
     btnDone.onclick = async () => {
-      console.log('[tasks] archive', t.text);
       if (BL_ON) {
-        await blSetArchived(t.objectId, true);
+        await blSetArchived(li.dataset.id, true);
         await refresh();
       } else {
         moveToArchive(t.id, li);
@@ -117,9 +118,8 @@ export function initTasks() {
     };
     btnDel.onclick = async () => {
       if (!confirm('Supprimer définitivement ?')) return;
-      console.log('[tasks] supprime', t.text);
       if (BL_ON) {
-        await blRemove(t.objectId);
+        await blRemove(li.dataset.id);
         await refresh();
       } else {
         tasks = tasks.filter(x => x.id !== t.id);
@@ -133,6 +133,7 @@ export function initTasks() {
 
   function renderArchived(t) {
     const li = document.createElement('li');
+    li.dataset.id = t.objectId || t.id; // 👈 garde l'id Backendless
     li.className = 'list-group-item list-group-item-light d-flex justify-content-between align-items-center';
     li.innerHTML = `<span><s>${escapeHtml(t.text)}</s></span>
       <div>
@@ -142,9 +143,8 @@ export function initTasks() {
     const [btnRestore, btnDel] = li.querySelectorAll('button');
 
     btnRestore.onclick = async () => {
-      console.log('[tasks] restaure', t.text);
       if (BL_ON) {
-        await blSetArchived(t.objectId, false);
+        await blSetArchived(li.dataset.id, false);
         await refresh();
       } else {
         restoreFromArchive(t.id, li);
@@ -153,7 +153,7 @@ export function initTasks() {
     btnDel.onclick = async () => {
       if (!confirm('Supprimer de l’archive ?')) return;
       if (BL_ON) {
-        await blRemove(t.objectId);
+        await blRemove(li.dataset.id);
         await refresh();
       } else {
         archived = archived.filter(x => x.id !== t.id);
@@ -165,7 +165,7 @@ export function initTasks() {
     archiveList.appendChild(li);
   }
 
-  // ---------- Fallback local ----------
+  // ---------- Logique locale fallback ----------
   function moveToArchive(id, li) {
     const idx = tasks.findIndex(t => t.id === id);
     if (idx === -1) return;
@@ -218,19 +218,17 @@ export function initTasks() {
     await ensureNotifPermission();
 
     if (BL_ON) {
-      console.log('[tasks] ajout (Backendless)', txt);
       await blCreate(txt);
       input.value = '';
       await refresh();
-      notify('Nouvelle tâche', txt);
+      await notify('Nouvelle tâche', txt);
     } else {
-      console.log('[tasks] ajout (local)', txt);
       const t = { id: Date.now(), text: txt };
       tasks.push(t);
       saveAll();
       renderTask(t);
       input.value = '';
-      notify('Nouvelle tâche', txt);
+      await notify('Nouvelle tâche', txt);
     }
   });
 
@@ -261,7 +259,7 @@ export function initTasks() {
   refresh();
 }
 
-/*** Dashboard */
+/*** Pour le Dashboard : récupération et ajout rapides */
 export function getTasks() {
   if (BL_ON) return blList(false);
   return JSON.parse(localStorage.getItem('tasks') || '[]');
@@ -277,4 +275,4 @@ export async function saveTask(text) {
   tasks.push({ id: Date.now(), text });
   localStorage.setItem('tasks', JSON.stringify(tasks));
   await notify('Nouvelle tâche', text);
-}       
+}
