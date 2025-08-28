@@ -347,6 +347,11 @@ Export CSV
 <script src="js/courses.js"></script>
 <script src="js/dishes.js"></script>
 
+<!-- Tes modules locaux (version globale, sans export/import) -->
+<script src="js/tasks.js"></script>
+<script src="js/courses.js"></script>
+<script src="js/dishes.js"></script>
+
 <script>
 // Initialisation quand la page est prête
 window.addEventListener("DOMContentLoaded", () => {
@@ -359,47 +364,9 @@ window.addEventListener("DOMContentLoaded", () => {
 <script>
 // Fix pour resize du calendrier quand onglet Préparation s’affiche
 document.querySelector('button[data-bs-target="#preparation"]').addEventListener('shown.bs.tab', () => {
-window.dispatchEvent(new Event('resize'));
+  window.dispatchEvent(new Event('resize'));
 });
 
-// Service Worker
-if ('serviceWorker' in navigator) {
-navigator.serviceWorker.register('/sw.js')
-.then(() => console.log('SW enregistré'))
-.catch(err => console.error('SW KO', err));
-}
-</script>
-
-<script>
-// Gérer affichage du bandeau offline
-function updateOnlineStatus() {
-  const banner = document.getElementById('offline-banner');
-  if (navigator.onLine) {
-    banner.style.display = 'none';
-  } else {
-    banner.style.display = 'block';
-  }
-}
-
-// Détection auto
-window.addEventListener('online', updateOnlineStatus);
-window.addEventListener('offline', updateOnlineStatus);
-
-// Vérifie dès le départ
-window.addEventListener('DOMContentLoaded', updateOnlineStatus);
-</script>
-
-<!-- Barre de navigation mobile -->
-<nav id="mobile-nav">
-<button data-bs-toggle="pill" data-bs-target="#dashboard" aria-label="Tableau de bord">🏠</button>
-<button data-bs-toggle="pill" data-bs-target="#preparation" aria-label="Préparation">📝</button>
-<button data-bs-toggle="pill" data-bs-target="#courses" aria-label="Courses">🛒</button>
-<button data-bs-toggle="pill" data-bs-target="#contacts" aria-label="Contacts">👥</button>
-<button data-bs-toggle="pill" data-bs-target="#finances" aria-label="Finances">💰</button>
-<button data-bs-toggle="pill" data-bs-target="#documents" aria-label="Documents">📂</button>
-</nav>
-
-<script>
 // Service Worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js')
@@ -409,7 +376,7 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <script>
-// Vérifie l'état en ligne/hors-ligne
+// Gérer affichage du bandeau offline
 function updateOnlineStatus() {
   const banner = document.getElementById('offline-banner');
   if (navigator.onLine) {
@@ -425,7 +392,7 @@ window.addEventListener('DOMContentLoaded', updateOnlineStatus);
 
 <script>  
 (function () {
-  // 1) Sécurise le "type" pour éviter un submit par défaut
+  // Sécurise le "type" pour éviter un submit par défaut
   document.querySelectorAll('#mobile-nav [data-bs-target]').forEach(btn => {
     btn.setAttribute('type', 'button');
   });
@@ -433,7 +400,6 @@ window.addEventListener('DOMContentLoaded', updateOnlineStatus);
     btn.setAttribute('type', 'button');
   });
 
-  // 2) Fonction pour afficher un onglet
   function showTab(targetSelector) {
     const sidebarTrigger = document.querySelector(`#sidebar [data-bs-target="${targetSelector}"]`);
     if (window.bootstrap && sidebarTrigger) {
@@ -441,14 +407,11 @@ window.addEventListener('DOMContentLoaded', updateOnlineStatus);
       tab.show();
       return;
     }
-    document.querySelectorAll('.tab-pane').forEach(p => {
-      p.classList.remove('show', 'active');
-    });
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('show', 'active'));
     const pane = document.querySelector(targetSelector);
     if (pane) pane.classList.add('show', 'active');
   }
 
-  // 3) Clics sur la barre mobile
   document.querySelectorAll('#mobile-nav [data-bs-target]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -457,33 +420,13 @@ window.addEventListener('DOMContentLoaded', updateOnlineStatus);
     });
   });
 
-  // 4) Bonus : resize pour le calendrier
+  // Bonus : resize calendrier
   document.querySelectorAll('[data-bs-target="#preparation"]').forEach(btn => {
     btn.addEventListener('shown.bs.tab', () => {
       window.dispatchEvent(new Event('resize'));
     });
   });
 })();
-</script>
-
-<script>
-async function askNotifPermission() {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
-
-  if (Notification.permission === 'default') {
-    try { 
-      await Notification.requestPermission();
-      console.log("Permission notification demandée");
-    } catch (err) {
-      console.warn("Permission notif refusée :", err);
-    }
-  } else {
-    console.log("Permission notif déjà :", Notification.permission);
-  }
-}
-
-// 👉 Demande la permission au chargement (mais n’envoie pas de notif auto)
-window.addEventListener('DOMContentLoaded', askNotifPermission);
 </script>
 
 <!-- Bandeau Offline -->
@@ -499,6 +442,7 @@ window.addEventListener('DOMContentLoaded', askNotifPermission);
   z-index:2000;">
     Hors ligne — affichage en mode local
 </div>
+
   
 
 
