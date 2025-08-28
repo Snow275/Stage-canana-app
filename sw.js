@@ -1,5 +1,5 @@
 // sw.js — PWA offline avec fallback SPA
-const CACHE_NAME = 'stage-planner-v15';
+const CACHE_NAME = 'stage-planner-v12';
 
 const APP_SHELL = [
   '/',
@@ -46,19 +46,25 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // 1) NE PAS mettre en cache l’API Backendless (toujours réseau)
+  // ❗️1) NE PAS mettre en cache l’API Backendless (toujours réseau)
   if (url.origin === 'https://api.backendless.com') {
+    // pour sécurité: toutes méthodes non-GET → direct réseau
     if (req.method !== 'GET') {
       event.respondWith(fetch(req));
       return;
     }
-    event.respondWith(fetch(req).catch(() => caches.match(req)));
+    // GET → network-first, fallback cache si vraiment offline
+    event.respondWith(
+      fetch(req).catch(() => caches.match(req))
+    );
     return;
   }
 
   // 2) Navigations → renvoie index.html depuis le cache (SPA fallback)
   if (req.mode === 'navigate') {
-    event.respondWith(caches.match('/index.html').then((res) => res || fetch(req)));
+    event.respondWith(
+      caches.match('/index.html').then((res) => res || fetch(req))
+    );
     return;
   }
 
@@ -77,7 +83,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// 🔔 Notifications locales : clic → focus/ouverture
+// 🔔 Notifications : clic → focus/ouverture
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
@@ -90,12 +96,3 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
-
-/* ==== SUPPRIMÉ (Web Push) ===================================
-   - self.addEventListener('push', ...)
-   - self.addEventListener('pushsubscriptionchange', ...)
-   - le 2e notificationclick redondant
-   ============================================================ */
-
-
-
