@@ -1,5 +1,5 @@
 // sw.js — PWA offline avec fallback SPA (sécurisé)
-const CACHE_NAME = 'stage-planner-safe-v1';
+const CACHE_NAME = 'stage-planner-safe-v2';
 
 // 👉 Liste des fichiers à pré-cacher
 const APP_SHELL = [
@@ -80,3 +80,4 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
