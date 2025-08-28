@@ -1,8 +1,7 @@
-/*** Module Tâches & To-Do*/
+        /*** Module Tâches & To-Do*/
 
 // ================================
 // BACKENDLESS >>> CONFIG MINIMALE
-// Mets tes clés ici (sinon fallback localStorage)
 const BL_APP_ID = "948A3DAD-06F1-4F45-BECA-A039688312DD";
 const BL_REST_KEY = "8C69AAC6-204C-48CE-A60B-137706E8E183";
 const BL_BASE = (BL_APP_ID && BL_REST_KEY)
@@ -10,27 +9,18 @@ const BL_BASE = (BL_APP_ID && BL_REST_KEY)
   : null;
 const BL_ON = !!BL_BASE;
 
-// --- Identifiant persistant de l'appareil (pour savoir qui a créé quoi)
-const MY_DEVICE_ID = (() => {
-  try {
-    const KEY = 'stage_planner_device_id';
-    let id = localStorage.getItem(KEY);
-    if (!id) {
-      id = 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8);
-      localStorage.setItem(KEY, id);
-    }
-    return id;
-  } catch {
-    return 'dev-' + Math.random().toString(36).slice(2,10);
-  }
+// 🔑 identifiant unique par appareil
+const MY_DEVICE_ID = localStorage.getItem('myDeviceId') || (() => {
+  const id = 'dev-' + Math.random().toString(36).slice(2);
+  localStorage.setItem('myDeviceId', id);
+  return id;
 })();
 
-// --- Notifications helper (FIABLE mobile) ---
+// --- Notifications helper ---
 async function notify(title, body) {
   try {
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
     if (Notification.permission !== 'granted') return;
-
     const reg = await navigator.serviceWorker.ready;
     if (reg && reg.showNotification) {
       await reg.showNotification(title, {
@@ -41,29 +31,13 @@ async function notify(title, body) {
         tag: 'stage-planner-task',
         renotify: false
       });
-    } else {
-      new Notification(title, { body });
     }
   } catch (e) {
     console.warn('Notif KO:', e);
   }
 }
 
-// (garde faux pour éviter notif au re-rendu)
 const SHOULD_NOTIFY_ON_RENDER = false;
-
-// ✅ Empêche de notifier le créateur : on mémorise les IDs créés localement
-const SELF_CREATED_IDS = new Set();
-
-// Pour détecter les nouvelles tâches entre deux refresh()
-let lastTaskIds = new Set();
-let firstLoadDone = false;
-
-// 🔁 Polling (pour que les autres appareils voient les nouvelles tâches)
-const POLL_MS = 8000; // 8s
-let pollTimer = null;
-function startPolling() { stopPolling(); pollTimer = setInterval(refresh, POLL_MS); }
-function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
 
 async function blEnsureOK(res){
   if(!res.ok){
@@ -72,7 +46,7 @@ async function blEnsureOK(res){
   }
 }
 
-// ✅ Inclure archived=false **OU** archived is null pour la liste "en cours"
+// inclut archived=false ou null
 async function blList(archived){
   let q;
   if (archived) {
@@ -85,11 +59,11 @@ async function blList(archived){
   return res.json();
 }
 
+// ✅ ajoute creatorDeviceId
 async function blCreate(text){
-  const payload = { text, archived:false, creatorDeviceId: MY_DEVICE_ID };
   const res = await fetch(BL_BASE, {
     method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({ text, archived:false, creatorDeviceId: MY_DEVICE_ID })
   });
   await blEnsureOK(res);
   return res.json();
@@ -117,12 +91,11 @@ export function initTasks() {
   const archiveList = document.getElementById('archived-list');
   const btnExp = document.getElementById('export-tasks');
 
-  // BACKENDLESS >>> état en mémoire
   let tasks = [];
   let archived = [];
-  // BACKENDLESS <<<
+  // pour suivre la dernière liste et détecter les nouvelles
+  let lastTaskIds = new Set();
 
-  // ---------- Affichage ----------
   function renderTask(t) {
     const li = document.createElement('li');
     li.className = 'list-group-item d-flex justify-content-between align-items-center';
@@ -132,10 +105,6 @@ export function initTasks() {
         <button class="btn btn-sm btn-outline-danger" title="Supprimer">❌</button>
       </div>`;
     const [btnDone, btnDel] = li.querySelectorAll('button');
-
-    if (SHOULD_NOTIFY_ON_RENDER && typeof t.text === 'string') {
-      notify('Ajout dans la liste', t.text);
-    }
 
     btnDone.onclick = async () => {
       if (BL_ON) {
@@ -193,7 +162,6 @@ export function initTasks() {
     archiveList.appendChild(li);
   }
 
-  // ---------- Logique locale fallback ----------
   function moveToArchive(id, li) {
     const idx = tasks.findIndex(t => t.id === id);
     if (idx === -1) return;
@@ -226,47 +194,27 @@ export function initTasks() {
     archived.forEach(renderArchived);
   }
 
-  // ---------- Chargement initial + détection des nouvelles tâches ----------
+  // ---------- Chargement initial ----------
   async function refresh() {
-    const previousIds = new Set(lastTaskIds);
-
+    let newTasks;
     if (BL_ON) {
-      [tasks, archived] = await Promise.all([ blList(false), blList(true) ]);
+      [newTasks, archived] = await Promise.all([ blList(false), blList(true) ]);
     } else {
-      tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+      newTasks = JSON.parse(localStorage.getItem('tasks') || '[]');
       archived = JSON.parse(localStorage.getItem('archivedTasks') || '[]');
     }
 
-    renderAll();
-
-    const currentIds = new Set(tasks.map(t => t.objectId || t.id));
-
-    if (!firstLoadDone) {
-      lastTaskIds = currentIds;
-      firstLoadDone = true;
-      return;
-    }
-
-    const newTasks = tasks.filter(t => !previousIds.has(t.objectId || t.id));
-
-    for (const t of newTasks) {
+    // 🔔 détecte nouvelles tâches (celles qui n’étaient pas dans lastTaskIds)
+    newTasks.forEach(t => {
       const id = t.objectId || t.id;
-
-      // pas de notif pour le créateur local
-      if (SELF_CREATED_IDS.has(id)) {
-        SELF_CREATED_IDS.delete(id);
-        continue;
-      }
-      if (t.creatorDeviceId && t.creatorDeviceId === MY_DEVICE_ID) {
-        continue;
-      }
-
-      if (t.text) {
+      if (!lastTaskIds.has(id) && t.creatorDeviceId && t.creatorDeviceId !== MY_DEVICE_ID) {
         notify('Nouvelle tâche', t.text);
       }
-    }
+    });
+    lastTaskIds = new Set(newTasks.map(t => t.objectId || t.id));
 
-    lastTaskIds = currentIds;
+    tasks = newTasks;
+    renderAll();
   }
 
   // ---------- Ajout ----------
@@ -276,27 +224,18 @@ export function initTasks() {
     if (!txt) return;
 
     if (BL_ON) {
-      const created = await blCreate(txt);
-      if (created && created.objectId) {
-        SELF_CREATED_IDS.add(created.objectId);
-      }
+      await blCreate(txt);
       input.value = '';
-      await refresh();
+      await refresh(); // ⚠️ pas de notify ici, laissé au refresh
     } else {
-      const tmpId = Date.now();
-      const t = { id: tmpId, text: txt, creatorDeviceId: MY_DEVICE_ID };
-      itemsPushLocal(t);
+      const t = { id: Date.now(), text: txt, creatorDeviceId: MY_DEVICE_ID };
+      tasks.push(t);
+      saveAll();
+      renderTask(t);
       input.value = '';
-      SELF_CREATED_IDS.add(tmpId);
-      await refresh();
+      // pas de notify local
     }
   });
-
-  function itemsPushLocal(t) {
-    tasks.push(t);
-    saveAll();
-    renderTask(t);
-  }
 
   // ---------- Export CSV ----------
   btnExp.addEventListener('click', async () => {
@@ -307,7 +246,7 @@ export function initTasks() {
     if (!data.length) return alert('Aucune tâche à exporter !');
     const header = 'id_or_objectId,texte,archived,creatorDeviceId';
     const rows = data.map(t =>
-      `${(t.objectId || t.id)},"${String(t.text).replace(/"/g,'""')}",${t.archived ? 'true':'false'},${t.creatorDeviceId || ''}`
+      `${(t.objectId || t.id)},"${String(t.text).replace(/"/g,'""')}",${t.archived ? 'true':'false'},${t.creatorDeviceId||''}`
     );
     downloadCSV('tasks.csv', [header, ...rows].join('\n'));
   });
@@ -321,20 +260,9 @@ export function initTasks() {
     document.body.removeChild(a);
   }
 
-  // GO
   refresh();
-
-  // 🔁 Auto-refresh pour capter les ajouts des autres appareils
-  startPolling();
-  window.addEventListener('focus', refresh);
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      refresh();
-      startPolling();
-    } else {
-      stopPolling();
-    }
-  });
+  // (optionnel) refresh toutes les 10s
+  setInterval(refresh, 10000);
 }
 
 /*** Pour le Dashboard : récupération et ajout rapides*/
@@ -343,23 +271,11 @@ export function getTasks() {
   return JSON.parse(localStorage.getItem('tasks') || '[]');
 }
 export async function saveTask(text) {
-  // Pas de notif locale ici : on laisse refresh() des autres appareils la déclencher
-  if (BL_ON) {
-    const created = await blCreate(text);
-    if (created && created.objectId) {
-      SELF_CREATED_IDS.add(created.objectId);
-    }
-    return;
+  if (BL_ON) { 
+    await blCreate(text); 
+    return; // ⚠️ pas de notify ici
   }
-  const tmpId = Date.now();
   const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
-  const t = { id: tmpId, text, creatorDeviceId: MY_DEVICE_ID };
-  tasks.push(t);
+  tasks.push({ id: Date.now(), text, creatorDeviceId: MY_DEVICE_ID });
   localStorage.setItem('tasks', JSON.stringify(tasks));
-  SELF_CREATED_IDS.add(tmpId);
 }
-
-// --- ✅ Patch global pour non-module ---
-window.initTasks = window.initTasks || initTasks;
-window.getTasks  = window.getTasks  || getTasks;
-window.saveTask  = window.saveTask  || saveTask;
