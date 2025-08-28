@@ -1,70 +1,29 @@
-// sw.js — PWA offline avec fallback SPA
-
-const CACHE_NAME = 'stage-planner-v1.2';
-
-const APP_SHELL = [
-  '/',
-  '/index.html',
-  '/css/style.css',
-  '/js/app.js',
-  '/js/tasks.js',
-  '/js/courses.js',
-  '/js/contacts.js',
-  '/js/dishes.js',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+// sw.js
+const CACHE_NAME = "stage-planner-v1";
+const ASSETS = [
+  "/",
+  "/index.html",
+  "/css/style.css",
+  "/js/tasks.js",
+  "/js/dishes.js"
 ];
 
-const EXTERNALS = [
-  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
-  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
-  'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.4/index.global.min.js',
-  'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
-];
-
-const SHELL_ALL = APP_SHELL.concat(EXTERNALS);
-
-// --- INSTALL ---
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ALL))
+self.addEventListener("install", e => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
   );
-  self.skipWaiting();
 });
 
-// --- ACTIVATE ---
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : undefined)))
+self.addEventListener("activate", e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     )
   );
-  self.clients.claim();
 });
 
-// --- FETCH ---
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
-
-  // Navigation (SPA fallback)
-  if (req.mode === 'navigate') {
-    event.respondWith(
-      caches.match('/index.html').then((res) => res || fetch(req))
-    );
-    return;
-  }
-
-  // Autres ressources → cache-first
-  event.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req)
-        .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
-          return res;
-        })
-        .catch(() => cached);
-    })
+self.addEventListener("fetch", e => {
+  e.respondWith(
+    fetch(e.request).catch(() => caches.match(e.request))
   );
 });
