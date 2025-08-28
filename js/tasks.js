@@ -11,6 +11,22 @@ const BL_BASE = (BL_APP_ID && BL_REST_KEY)
 const BL_ON = !!BL_BASE;
 
 // --- Notifications helper (FIABLE mobile) ---
+// 1) demander la permission (à appeler dans un geste utilisateur)
+async function ensureNotifPermission() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+  try {
+    const perm = await Notification.requestPermission();
+    console.log('[tasks] permission notif =', perm);
+    return perm === 'granted';
+  } catch (e) {
+    console.warn('[tasks] requestPermission KO', e);
+    return false;
+  }
+}
+
+// 2) afficher la notif via le Service Worker
 async function notify(title, body) {
   try {
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
@@ -209,6 +225,9 @@ export function initTasks() {
     const txt = input.value.trim();
     if (!txt) return;
 
+    // 🔑 IMPORTANT : on demande la permission *pendant* le geste utilisateur
+    await ensureNotifPermission();
+
     if (BL_ON) {
       await blCreate(txt);
       input.value = '';
@@ -257,9 +276,16 @@ export function getTasks() {
   return JSON.parse(localStorage.getItem('tasks') || '[]');
 }
 export async function saveTask(text) {
-  if (BL_ON) { await blCreate(text); await notify('Nouvelle tâche', text); return; }
+  // 🔑 Demande la permission si appelée depuis un bouton "Ajouter" du dashboard
+  await ensureNotifPermission();
+
+  if (BL_ON) { 
+    await blCreate(text); 
+    await notify('Nouvelle tâche', text); 
+    return; 
+  }
   const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
   tasks.push({ id: Date.now(), text });
   localStorage.setItem('tasks', JSON.stringify(tasks));
   await notify('Nouvelle tâche', text);
-}
+        }
