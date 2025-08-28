@@ -472,58 +472,6 @@ async function askNotifPermission() {
 
   if (Notification.permission === 'default') {
     try { 
-      const result = await Notification.requestPermission();
-      console.log("Permission notif :", result);
-    } catch (err) {
-      console.warn("Permission notif refusée :", err);
-    }
-  } else {
-    console.log("Permission notif déjà :", Notification.permission);
-  }
-}
-window.addEventListener('DOMContentLoaded', askNotifPermission);
-</script>
-
-<script>
-async function fireWelcomeNotif() {
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    await reg.showNotification('Bienvenue 👋', {
-      body: 'Notifications actives pour Stage Planner ✨',
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
-      vibrate: [80, 40, 80],
-      tag: 'welcome-once'
-    });
-  } catch (err) {
-    console.warn('Impossible d’afficher la notif :', err);
-  }
-}
-
-async function askNotifPermission() {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-    console.warn('Notifications non supportées par ce navigateur.');
-    return;
-  }
-
-  let status = Notification.permission;
-  if (status === 'default') {
-    try {
-      status = await Notification.requestPermission();
-      console.log('Permission notif :', status);
-    } catch (err) {
-      console.warn('Demande de permission KO :', err);
-    }
-  }
-
-  if (status === 'granted') {
-    setTimeout(fireWelcomeNotif, 300); // envoie une notif de bienvenue
-<script>
-async function askNotifPermission() {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
-
-  if (Notification.permission === 'default') {
-    try { 
       await Notification.requestPermission();
       console.log("Permission notification demandée");
     } catch (err) {
@@ -551,15 +499,8 @@ window.addEventListener('DOMContentLoaded', askNotifPermission);
   z-index:2000;">
     Hors ligne — affichage en mode local
 </div>
-async function askNotifPermission() {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
-  if (Notification.permission === 'default') {
-    try { await Notification.requestPermission(); } catch {}
-  }
-}
-// Si tu veux demander la permission automatiquement au 1er chargement :
-window.addEventListener('DOMContentLoaded', askNotifPermission);
-</script>
+  
+
 
 </body>
 </html>
