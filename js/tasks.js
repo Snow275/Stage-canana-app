@@ -60,7 +60,7 @@ let lastTaskIds = new Set();
 let firstLoadDone = false;
 
 // 🔁 Polling (pour que les autres appareils voient les nouvelles tâches)
-const POLL_MS = 8000; // 8s (tu peux mettre 5000 si tu veux plus rapide)
+const POLL_MS = 8000; // 8s
 let pollTimer = null;
 function startPolling() { stopPolling(); pollTimer = setInterval(refresh, POLL_MS); }
 function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
@@ -357,4 +357,9 @@ export async function saveTask(text) {
   tasks.push(t);
   localStorage.setItem('tasks', JSON.stringify(tasks));
   SELF_CREATED_IDS.add(tmpId);
-}                  
+}
+
+// --- ✅ Patch global pour non-module ---
+window.initTasks = window.initTasks || initTasks;
+window.getTasks  = window.getTasks  || getTasks;
+window.saveTask  = window.saveTask  || saveTask;
