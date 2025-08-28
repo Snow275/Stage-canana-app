@@ -400,13 +400,27 @@ window.addEventListener('DOMContentLoaded', updateOnlineStatus);
 </nav>
 
 <script>
+// Service Worker
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    for (let reg of regs) {
-      reg.update(); // force update du SW
-    }
-  });
+  navigator.serviceWorker.register('/sw.js')
+    .then(() => console.log('✅ SW enregistré'))
+    .catch(err => console.error('❌ SW KO', err));
 }
+</script>
+
+<script>
+// Vérifie l'état en ligne/hors-ligne
+function updateOnlineStatus() {
+  const banner = document.getElementById('offline-banner');
+  if (navigator.onLine) {
+    banner.style.display = 'none';
+  } else {
+    banner.style.display = 'block';
+  }
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+window.addEventListener('DOMContentLoaded', updateOnlineStatus);
 </script>
 
 <script>  
