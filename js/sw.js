@@ -1,9 +1,13 @@
 // sw.js — PWA offline avec fallback SPA
-const CACHE_NAME = 'stage-planner-v9';
+
+// ==============================
+// CONFIG
+// ==============================
+const CACHE_NAME = 'stage-planner-v10';
 
 // 👉 Liste tout ce dont l'UI a besoin pour s'ouvrir hors-ligne
 const APP_SHELL = [
-  '/',                 // mets "/" si déployé à la racine du domaine
+  '/',                 // "/" si déployé à la racine du domaine
   '/index.html',
   '/css/style.css',
   '/js/app.js',
@@ -25,7 +29,9 @@ const EXTERNALS = [
 
 const SHELL_ALL = APP_SHELL.concat(EXTERNALS);
 
-// Install → précache l’UI
+// ==============================
+// INSTALL : pré-cache l’UI
+// ==============================
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ALL))
@@ -33,22 +39,27 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate → supprime les vieux caches
+// ==============================
+// ACTIVATE : nettoie les anciens caches
+// ==============================
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : undefined)))
+      Promise.all(
+        keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : undefined))
+      )
     )
   );
   self.clients.claim();
 });
 
-// Fetch handler
+// ==============================
+// FETCH : stratégie de cache
+// ==============================
 self.addEventListener('fetch', (event) => {
   const req = event.request;
 
-  // 1) Navigations (refresh, URL directe, clics internes) :
-  //    renvoie TOUJOURS index.html depuis le cache → évite l'écran "no network".
+  // 1) Navigations (URL directe, refresh, clics internes) → index.html depuis le cache
   if (req.mode === 'navigate') {
     event.respondWith(
       caches.match('/index.html').then((res) => res || fetch(req))
@@ -56,33 +67,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2) Assets (CSS/JS/icônes/CDN) → cache-first, puis réseau, puis retombe sur cache si réseau KO
+  // 2) Assets (CSS/JS/images/CDN) → cache-first puis réseau
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
+
       return fetch(req)
         .then((res) => {
-          // met en cache pour la prochaine fois (même si opaque)
           const clone = res.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
           return res;
         })
-        .catch(() => cached); // si tout échoue, on rend ce qu’on a (souvent null, mais on essaie)
+        .catch(() => cached); // fallback si réseau KO
     })
   );
-
-// Réception d'un message depuis la page pour afficher une notification
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-    const { title, body } = event.data;
-    self.registration.showNotification(title, {
-      body,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
-    });
-  }
 });
-
-
-
-
