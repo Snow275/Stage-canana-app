@@ -11,11 +11,11 @@ const BL_BASE = (BL_APP_ID && BL_REST_KEY)
   : null;
 const BL_ON = !!BL_BASE;
 
-// --- Notifications helper (discret, ne casse rien si non supporté) ---
+// --- Notifications helper (ajouté) ---
 async function notify(title, body) {
   try {
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
-    if (Notification.permission !== 'granted') return; // on ne spam pas
+    if (Notification.permission !== 'granted') return;
 
     const reg = await navigator.serviceWorker.getRegistration();
     if (reg && reg.showNotification) {
@@ -26,11 +26,13 @@ async function notify(title, body) {
         silent: false
       });
     } else {
-      // fallback très simple
       new Notification(title, { body });
     }
   } catch { /* no-op */ }
 }
+
+// (ajouté) drapeau pour désactiver la notif au re-rendu sans supprimer la ligne d’origine
+const SHOULD_NOTIFY_ON_RENDER = false;
 
 async function blEnsureOK(res){
   if(!res.ok){
@@ -91,7 +93,11 @@ export function initTasks() {
         <button class="btn btn-sm btn-outline-danger" title="Supprimer">❌</button>
       </div>`;
     const [btnDone, btnDel] = li.querySelectorAll('button');
-    notify('Ajout dans la liste', txt);
+
+    // (modifié sans suppression) — on garde la ligne de notif mais on la neutralise
+    if (SHOULD_NOTIFY_ON_RENDER && typeof txt !== 'undefined') {
+      notify('Ajout dans la liste', txt);
+    }
 
     // BACKENDLESS >>>
     btnDone.onclick = async () => {
@@ -214,12 +220,16 @@ export function initTasks() {
       await blCreate(txt);
       input.value = '';
       await refresh();
+      // (ajouté) notification après succès serveur
+      notify('Nouvelle tâche', txt);
     } else {
       const t = { id: Date.now(), text: txt };
       tasks.push(t);
       saveAll();
       renderTask(t);
       input.value = '';
+      // (ajouté) notification après succès local
+      notify('Nouvelle tâche', txt);
     }
   });
 
@@ -258,9 +268,14 @@ export function getTasks() {
   return JSON.parse(localStorage.getItem('tasks') || '[]');
 }
 export async function saveTask(text) {
-  if (BL_ON) { await blCreate(text); return; }
+  // (modifié) on ajoute la notification ici aussi
+  if (BL_ON) {
+    await blCreate(text);
+    notify('Nouvelle tâche', text);
+    return;
+  }
   const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
   tasks.push({ id: Date.now(), text });
   localStorage.setItem('tasks', JSON.stringify(tasks));
+  notify('Nouvelle tâche', text);
 }
-
