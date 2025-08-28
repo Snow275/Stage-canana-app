@@ -526,7 +526,16 @@ window.addEventListener('DOMContentLoaded', askNotifPermission);
   z-index:2000;">
     Hors ligne — affichage en mode local
 </div>
-
+<script>
+async function askNotifPermission() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+  if (Notification.permission === 'default') {
+    try { await Notification.requestPermission(); } catch {}
+  }
+}
+// Si tu veux demander la permission automatiquement au 1er chargement :
+window.addEventListener('DOMContentLoaded', askNotifPermission);
+</script>
 
 </body>
 </html>
