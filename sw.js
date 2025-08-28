@@ -1,5 +1,5 @@
 // sw.js — PWA offline avec fallback SPA
-const CACHE_NAME = 'stage-planner-v12';
+const CACHE_NAME = 'stage-planner-v13;
 
 const APP_SHELL = [
   '/',
@@ -88,5 +88,6 @@ self.addEventListener('message', (event) => {
     });
   }
 });
+
 
 
