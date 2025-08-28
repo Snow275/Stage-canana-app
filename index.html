@@ -408,60 +408,68 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+
 <script>  
-  (function () {
-    // 1) Sécurise le "type" pour éviter un submit par défaut
-    document.querySelectorAll('#mobile-nav [data-bs-target]').forEach(btn => {
-      btn.setAttribute('type', 'button');
-    });
-    document.querySelectorAll('#sidebar [data-bs-toggle="pill"]').forEach(btn => {
-      btn.setAttribute('type', 'button');
-    });
+(function () {
+  // 1) Sécurise le "type" pour éviter un submit par défaut
+  document.querySelectorAll('#mobile-nav [data-bs-target]').forEach(btn => {
+    btn.setAttribute('type', 'button');
+  });
+  document.querySelectorAll('#sidebar [data-bs-toggle="pill"]').forEach(btn => {
+    btn.setAttribute('type', 'button');
+  });
 
-    // 2) Fonction pour afficher un onglet
-    function showTab(targetSelector) {
-      // On essaye via l’API Bootstrap (en passant par le bouton "officiel" de la sidebar)
-      const sidebarTrigger = document.querySelector(`#sidebar [data-bs-target="${targetSelector}"]`);
-      if (window.bootstrap && sidebarTrigger) {
-        const tab = new bootstrap.Tab(sidebarTrigger);
-        tab.show();
-        return;
-      }
-      // Fallback manuel si Bootstrap pas dispo/planté
-      document.querySelectorAll('.tab-pane').forEach(p => {
-        p.classList.remove('show', 'active');
-      });
-      const pane = document.querySelector(targetSelector);
-      if (pane) pane.classList.add('show', 'active');
-    }
+  // 2) Fonction pour afficher un onglet
+  function showTab(targetSelector) {
+    const sidebarTrigger = document.querySelector(`#sidebar [data-bs-target="${targetSelector}"]`);
+    if (window.bootstrap && sidebarTrigger) {
+      const tab = new bootstrap.Tab(sidebarTrigger);
+      tab.show();
+      return;
+    }
+    document.querySelectorAll('.tab-pane').forEach(p => {
+      p.classList.remove('show', 'active');
+    });
+    const pane = document.querySelector(targetSelector);
+    if (pane) pane.classList.add('show', 'active');
+  }
 
-    // 3) Clics sur la barre mobile : on force l’ouverture de l’onglet
-    document.querySelectorAll('#mobile-nav [data-bs-target]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const target = btn.getAttribute('data-bs-target');
-        showTab(target);
-      });
-    });
+  // 3) Clics sur la barre mobile
+  document.querySelectorAll('#mobile-nav [data-bs-target]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = btn.getAttribute('data-bs-target');
+      showTab(target);
+    });
+  });
 
-    // 4) Bonus : quand on montre l’onglet Préparation, on retrig le resize (calendrier)
-    document.querySelectorAll('[data-bs-target="#preparation"]').forEach(btn => {
-      btn.addEventListener('shown.bs.tab', () => {
-        window.dispatchEvent(new Event('resize'));
-      });
-    });
-  })();
+  // 4) Bonus : resize pour le calendrier
+  document.querySelectorAll('[data-bs-target="#preparation"]').forEach(btn => {
+    btn.addEventListener('shown.bs.tab', () => {
+      window.dispatchEvent(new Event('resize'));
+    });
+  });
+})();
 </script>
 
 <script>
 async function askNotifPermission() {
   if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+
   if (Notification.permission === 'default') {
-    try { await Notification.requestPermission(); } catch {}
+    try { 
+      const result = await Notification.requestPermission();
+      console.log("Permission notif :", result);
+    } catch (err) {
+      console.warn("Permission notif refusée :", err);
+    }
+  } else {
+    console.log("Permission notif déjà :", Notification.permission);
   }
 }
 window.addEventListener('DOMContentLoaded', askNotifPermission);
-</script>  
+</script>
+    
 
   <!-- Bandeau Offline -->
 <div id="offline-banner" style="
@@ -478,6 +486,7 @@ window.addEventListener('DOMContentLoaded', askNotifPermission);
 </div>
 </body>
 </html>
+
 
 
 
