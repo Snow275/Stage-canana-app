@@ -402,6 +402,17 @@ window.addEventListener('DOMContentLoaded', updateOnlineStatus);
   
 
 <script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    for (let reg of regs) {
+      reg.update(); // force update du SW
+    }
+  });
+}
+</script>
+  
   (function () {
     // 1) Sécurise le "type" pour éviter un submit par défaut
     document.querySelectorAll('#mobile-nav [data-bs-target]').forEach(btn => {
@@ -461,6 +472,7 @@ window.addEventListener('DOMContentLoaded', updateOnlineStatus);
 </div>
 </body>
 </html>
+
 
 
 
