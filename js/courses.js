@@ -114,6 +114,7 @@ export function initCourses() {
         i.done = !i.done;
         saveAll();
         li.classList.toggle('checked');
+        notify('Nouvelle tâche ajouté', txt);
       }
     };
 
@@ -206,3 +207,4 @@ export function initCourses() {
   // ---------- Go ----------
   refresh();
 }
+
