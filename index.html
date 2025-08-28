@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#2C3E50" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stage Canada Planner</title>
+
+  <!-- iOS PWA support -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Stage Planner CA" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- FullCalendar CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.4/index.global.min.css" rel="stylesheet" />
+  <!-- Ton style perso -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body class="d-flex">
+
+  <!-- Sidebar -->
+  <nav id="sidebar" class="bg-dark text-white p-3" style="width:250px;">
+    <a href="#" class="d-flex align-items-center mb-3 text-white text-decoration-none">
+      <span class="fs-4">Trip Planner 🇨🇦</span>
+    </a>
+    <hr class="text-secondary"/>
+    <ul class="nav nav-pills flex-column mb-auto" role="tablist">
+      <li class="nav-item"><button class="nav-link active text-white" data-bs-toggle="pill" data-bs-target="#dashboard" type="button">🏠 Tableau de bord</button></li>
+      <li class="nav-item"><button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#preparation" type="button">📝 Préparation</button></li>
+      <li class="nav-item"><button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#courses" type="button">🛒 Courses</button></li>
+      <li class="nav-item"><button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#contacts" type="button">👥 Contacts</button></li>
+      <li class="nav-item"><button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#finances" type="button">💰 Finances</button></li>
+      <li class="nav-item"><button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#documents" type="button">📂 Documents</button></li>
+    </ul>
+    <hr class="text-secondary"/>
+    <div class="text-center"><small>© 2025 Stage Planner</small></div>
+  </nav>
+
+  <!-- Main content -->
+  <div class="tab-content flex-grow-1 p-4" style="overflow-y:auto; height:100vh;">
+    <!-- (tes onglets et contenu restent inchangés) -->
+  </div>
+
+  <!-- JS Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.4/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- Firebase -->
+  <script type="module" src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js"></script>
+  <script type="module" src="js/firebase.js"></script>
+  <script type="module" src="js/app.js"></script>
+
+  <!-- Gun -->
+  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+
+  <!-- Modules locaux -->
+  <script src="js/tasks.js"></script>
+  <script src="js/courses.js"></script>
+  <script src="js/dishes.js"></script>
+
+  <script>
+    // Initialisation quand la page est prête
+    window.addEventListener("DOMContentLoaded", () => {
+      try { window.initTasks && window.initTasks(); } catch(e){ console.error('initTasks KO', e); }
+      try { window.initCourses && window.initCourses(); } catch(e){ console.error('initCourses KO', e); }
+      try { window.initDishes && window.initDishes(); } catch(e){ console.error('initDishes KO', e); }
+    });
+  </script>
+
+  <script>
+    // Fix resize calendrier
+    document.querySelector('button[data-bs-target="#preparation"]').addEventListener('shown.bs.tab', () => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    // Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => console.log('SW enregistré'))
+        .catch(err => console.error('SW KO', err));
+    }
+  </script>
+
+  <!-- ✅ Nouveau script bandeau offline -->
+  <script>
+    function updateOnlineStatus() {
+      const banner = document.getElementById('offline-banner');
+      if (navigator.onLine) {
+        banner.style.display = 'none';   // reste caché en ligne
+      } else {
+        banner.style.display = 'block';  // affiche seulement hors ligne
+      }
+    }
+
+    // écoute uniquement les vrais changements de statut
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+
+    // vérifie au chargement : si offline → affiche, sinon → reste caché
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!navigator.onLine) {
+        document.getElementById('offline-banner').style.display = 'block';
+      }
+    });
+  </script>
+
+  <!-- Barre navigation mobile -->
+  <nav id="mobile-nav">
+    <button data-bs-toggle="pill" data-bs-target="#dashboard" aria-label="Tableau de bord">🏠</button>
+    <button data-bs-toggle="pill" data-bs-target="#preparation" aria-label="Préparation">📝</button>
+    <button data-bs-toggle="pill" data-bs-target="#courses" aria-label="Courses">🛒</button>
+    <button data-bs-toggle="pill" data-bs-target="#contacts" aria-label="Contacts">👥</button>
+    <button data-bs-toggle="pill" data-bs-target="#finances" aria-label="Finances">💰</button>
+    <button data-bs-toggle="pill" data-bs-target="#documents" aria-label="Documents">📂</button>
+  </nav>
+
+  <!-- Bandeau Offline -->
+  <div id="offline-banner" style="
+    display:none;
+    position:fixed;
+    top:0; left:0; right:0;
+    background:#ff4d4d;
+    color:white;
+    text-align:center;
+    padding:8px;
+    font-size:14px;
+    z-index:2000;">
+      Vous êtes hors ligne — affichage en mode local
+  </div>
+
+</body>
+</html>
