@@ -357,4 +357,4 @@ export async function saveTask(text) {
   tasks.push(t);
   localStorage.setItem('tasks', JSON.stringify(tasks));
   SELF_CREATED_IDS.add(tmpId);
-}
+}                  
