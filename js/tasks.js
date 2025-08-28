@@ -201,6 +201,14 @@ export function initTasks() {
     }
   });
 
+  // ... après ajout réussi de la tâche :
+if (Notification.permission === 'granted' && navigator.serviceWorker.controller) {
+  navigator.serviceWorker.controller.postMessage({
+    type: 'SHOW_NOTIFICATION',
+    title: 'Tâches',
+    body: `Tâche "${text}" ajoutée.`
+  });
+
   // ---------- Export CSV ----------
   btnExp.addEventListener('click', async () => {
     // s'assure d'avoir l'état à jour si backendless
@@ -241,3 +249,4 @@ export async function saveTask(text) {
   tasks.push({ id: Date.now(), text });
   localStorage.setItem('tasks', JSON.stringify(tasks));
 }
+
