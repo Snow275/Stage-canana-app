@@ -1,22 +1,23 @@
-/*** Module Tâches & To-Do */
+/*** Module Tâches & To-Do*/
 
 // ================================
 // BACKENDLESS >>> CONFIG MINIMALE
 // Mets tes clés ici (sinon fallback localStorage)
-const BL_APP_ID  = "948A3DAD-06F1-4F45-BECA-A039688312DD";
+const BL_APP_ID = "948A3DAD-06F1-4F45-BECA-A039688312DD";
 const BL_REST_KEY = "8C69AAC6-204C-48CE-A60B-137706E8E183";
 const BL_BASE = (BL_APP_ID && BL_REST_KEY)
   ? `https://api.backendless.com/${BL_APP_ID}/${BL_REST_KEY}/data/Taches`
   : null;
 const BL_ON = !!BL_BASE;
 
-// --- Notifications helper (mobile-fiable) ---
+// --- Notifications helper (FIABLE mobile) ---
 async function notify(title, body) {
   try {
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
     if (Notification.permission !== 'granted') return;
 
-    const reg = await navigator.serviceWorker.ready; // plus fiable que getRegistration()
+    // Attend le SW prêt (plus fiable que getRegistration() sur mobile)
+    const reg = await navigator.serviceWorker.ready;
     if (reg && reg.showNotification) {
       await reg.showNotification(title, {
         body,
@@ -27,42 +28,48 @@ async function notify(title, body) {
         renotify: false
       });
     } else {
-      new Notification(title, { body }); // fallback
+      // Fallback (peut être bloqué sur mobile)
+      new Notification(title, { body });
     }
   } catch (e) {
     console.warn('Notif KO:', e);
   }
 }
 
-// (laisse false pour éviter une notif au re-render)
+// (garde faux pour éviter notif au re-rendu)
 const SHOULD_NOTIFY_ON_RENDER = false;
 
-// -------- API Backendless --------
 async function blEnsureOK(res){
   if(!res.ok){
     const txt = await res.text().catch(()=>res.statusText);
     throw new Error(`Backendless HTTP ${res.status}: ${txt}`);
   }
 }
+
+// ✅ Correction ICI : inclure archived=false **OU** archived is null pour les "en cours"
 async function blList(archived){
-  const q = `where=archived%3D${archived ? "true":"false"}&sortBy=created%20desc`;
+  let q;
+  if (archived) {
+    q = "where=archived%3Dtrue&sortBy=created%20desc";
+  } else {
+    q = "where=archived%3Dfalse%20or%20archived%20is%20null&sortBy=created%20desc";
+  }
   const res = await fetch(`${BL_BASE}?${q}`);
   await blEnsureOK(res);
   return res.json();
 }
+
 async function blCreate(text){
   const res = await fetch(BL_BASE, {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
+    method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ text, archived:false })
   });
   await blEnsureOK(res);
-  return res.json(); // {objectId, text, archived:false, ...}
+  return res.json();
 }
 async function blSetArchived(objectId, val){
   const res = await fetch(`${BL_BASE}/${objectId}`, {
-    method:"PATCH",
-    headers:{ "Content-Type":"application/json" },
+    method:"PATCH", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ archived: val })
   });
   await blEnsureOK(res);
@@ -83,9 +90,10 @@ export function initTasks() {
   const archiveList = document.getElementById('archived-list');
   const btnExp = document.getElementById('export-tasks');
 
-  // état en mémoire
+  // BACKENDLESS >>> état en mémoire
   let tasks = [];
   let archived = [];
+  // BACKENDLESS <<<
 
   // ---------- Affichage ----------
   function renderTask(t) {
@@ -99,13 +107,14 @@ export function initTasks() {
     const [btnDone, btnDel] = li.querySelectorAll('button');
 
     if (SHOULD_NOTIFY_ON_RENDER && typeof t.text === 'string') {
+      // désactivé par défaut
       notify('Ajout dans la liste', t.text);
     }
 
     btnDone.onclick = async () => {
       if (BL_ON) {
-        try { await blSetArchived(t.objectId, true); } catch(e){ console.warn(e); }
-        await refresh(); // <<< recharge l’état (fiable)
+        await blSetArchived(t.objectId, true);
+        await refresh();
       } else {
         moveToArchive(t.id, li);
       }
@@ -113,8 +122,8 @@ export function initTasks() {
     btnDel.onclick = async () => {
       if (!confirm('Supprimer définitivement ?')) return;
       if (BL_ON) {
-        try { await blRemove(t.objectId); } catch(e){ console.warn(e); }
-        await refresh(); // <<< recharge l’état (fiable)
+        await blRemove(t.objectId);
+        await refresh();
       } else {
         tasks = tasks.filter(x => x.id !== t.id);
         saveAll();
@@ -137,8 +146,8 @@ export function initTasks() {
 
     btnRestore.onclick = async () => {
       if (BL_ON) {
-        try { await blSetArchived(t.objectId, false); } catch(e){ console.warn(e); }
-        await refresh(); // <<< recharge l’état
+        await blSetArchived(t.objectId, false);
+        await refresh();
       } else {
         restoreFromArchive(t.id, li);
       }
@@ -146,8 +155,8 @@ export function initTasks() {
     btnDel.onclick = async () => {
       if (!confirm('Supprimer de l’archive ?')) return;
       if (BL_ON) {
-        try { await blRemove(t.objectId); } catch(e){ console.warn(e); }
-        await refresh(); // <<< recharge l’état
+        await blRemove(t.objectId);
+        await refresh();
       } else {
         archived = archived.filter(x => x.id !== t.id);
         saveAll();
@@ -186,8 +195,7 @@ export function initTasks() {
   function escapeHtml(s) { const div = document.createElement('div'); div.textContent = s; return div.innerHTML; }
 
   function renderAll() {
-    list.innerHTML = '';
-    archiveList.innerHTML = '';
+    list.innerHTML = ''; archiveList.innerHTML = '';
     tasks.forEach(renderTask);
     archived.forEach(renderArchived);
   }
@@ -195,12 +203,7 @@ export function initTasks() {
   // ---------- Chargement initial ----------
   async function refresh() {
     if (BL_ON) {
-      try {
-        [tasks, archived] = await Promise.all([ blList(false), blList(true) ]);
-      } catch(e) {
-        console.warn('refresh BL KO', e);
-        // on ne casse pas l’UI : si BL KO on garde l’état courant
-      }
+      [tasks, archived] = await Promise.all([ blList(false), blList(true) ]);
     } else {
       tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
       archived = JSON.parse(localStorage.getItem('archivedTasks') || '[]');
@@ -215,17 +218,17 @@ export function initTasks() {
     if (!txt) return;
 
     if (BL_ON) {
-      try { await blCreate(txt); } catch(e){ console.warn(e); }
+      await blCreate(txt);
       input.value = '';
-      await refresh();              // <<< RECHARGE depuis le serveur (évite tout décalage)
-      await notify('Nouvelle tâche', txt); // notif informative
+      await refresh();
+      await notify('Nouvelle tâche', txt);  // 🔔 ici
     } else {
       const t = { id: Date.now(), text: txt };
       tasks.push(t);
       saveAll();
       renderTask(t);
       input.value = '';
-      await notify('Nouvelle tâche', txt);
+      await notify('Nouvelle tâche', txt);  // 🔔 ici
     }
   });
 
@@ -256,7 +259,7 @@ export function initTasks() {
   refresh();
 }
 
-/*** Pour le Dashboard : récupération et ajout rapides */
+/*** Pour le Dashboard : récupération et ajout rapides*/
 export function getTasks() {
   if (BL_ON) return blList(false);
   return JSON.parse(localStorage.getItem('tasks') || '[]');
