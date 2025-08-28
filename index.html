@@ -473,48 +473,39 @@ window.addEventListener('DOMContentLoaded', askNotifPermission);
 <script>
 async function fireWelcomeNotif() {
   try {
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
-    if (Notification.permission !== 'granted') return;
-
-    // Attend que le SW soit prêt (important sur certains navigateurs)
     const reg = await navigator.serviceWorker.ready;
-
-    if (reg && reg.showNotification) {
-      await reg.showNotification('Bienvenue 👋', {
-        body: 'Notifications actives pour Stage Planner ✨',
-        icon: '/icons/icon-192.png',
-        badge: '/icons/icon-192.png',
-        vibrate: [80, 40, 80],
-        tag: 'welcome-once'
-      });
-    } else {
-      // Fallback ultra simple (peut être bloqué par certains navigateurs)
-      new Notification('Bienvenue 👋', { body: 'Notifications actives pour Stage Planner ✨' });
-    }
+    await reg.showNotification('Bienvenue 👋', {
+      body: 'Notifications actives pour Stage Planner ✨',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      vibrate: [80, 40, 80],
+      tag: 'welcome-once'
+    });
   } catch (err) {
-    console.warn('Impossible d’afficher la notif de test :', err);
+    console.warn('Impossible d’afficher la notif :', err);
   }
 }
 
 async function askNotifPermission() {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    console.warn('Notifications non supportées par ce navigateur.');
+    return;
+  }
 
-  try {
-    let status = Notification.permission;
-    if (status === 'default') {
+  let status = Notification.permission;
+  if (status === 'default') {
+    try {
       status = await Notification.requestPermission();
       console.log('Permission notif :', status);
-    } else {
-      console.log('Permission notif déjà :', status);
+    } catch (err) {
+      console.warn('Demande de permission KO :', err);
     }
+  }
 
-    // Si autorisé → envoie une notif de test
-    if (status === 'granted') {
-      // petite attente pour laisser le SW s’enregistrer si besoin
-      setTimeout(fireWelcomeNotif, 300);
-    }
-  } catch (err) {
-    console.warn('Demande de permission notif KO :', err);
+  if (status === 'granted') {
+    setTimeout(fireWelcomeNotif, 300); // envoie une notif de bienvenue
+  } else {
+    console.log('Permission refusée ou bloquée :', status);
   }
 }
 
@@ -605,6 +596,7 @@ window.addEventListener('DOMContentLoaded', askNotifPermission);
 </script>
 </body>
 </html>
+
 
 
 
