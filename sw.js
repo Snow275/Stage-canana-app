@@ -1,5 +1,5 @@
 // sw.js — PWA offline avec fallback SPA
-const CACHE_NAME = 'stage-planner-v16';
+const CACHE_NAME = 'stage-planner-v-basic';
 
 const APP_SHELL = [
   '/',
@@ -23,7 +23,7 @@ const EXTERNALS = [
 
 const SHELL_ALL = APP_SHELL.concat(EXTERNALS);
 
-// Install → précache l’UI
+// Install → précache
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ALL))
@@ -46,21 +46,19 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // ❗️1) NE PAS mettre en cache l’API Backendless (toujours réseau)
+  // API Backendless → réseau direct
   if (url.origin === 'https://api.backendless.com') {
-    // pour sécurité: toutes méthodes non-GET → direct réseau
     if (req.method !== 'GET') {
       event.respondWith(fetch(req));
       return;
     }
-    // GET → network-first, fallback cache si vraiment offline
     event.respondWith(
       fetch(req).catch(() => caches.match(req))
     );
     return;
   }
 
-  // 2) Navigations → renvoie index.html depuis le cache (SPA fallback)
+  // SPA fallback
   if (req.mode === 'navigate') {
     event.respondWith(
       caches.match('/index.html').then((res) => res || fetch(req))
@@ -68,35 +66,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3) Assets (CSS/JS/icônes/CDN) → cache-first puis réseau
+  // Cache-first
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
-      return fetch(req)
-        .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
-          return res;
-        })
-        .catch(() => cached);
+      return fetch(req).then((res) => {
+        const clone = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+        return res;
+      }).catch(() => cached);
     })
   );
 });
-
-// 🔔 Notifications : clic → focus/ouverture
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsArr) => {
-      if (clientsArr.length > 0) {
-        clientsArr[0].focus();
-      } else {
-        clients.openWindow('/');
-      }
-    })
-  );
-});
-
-
-
-
