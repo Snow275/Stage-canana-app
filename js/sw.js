@@ -21,6 +21,7 @@ const EXTERNALS = [
 ];
 const SHELL_ALL = APP_SHELL.concat(EXTERNALS);
 
+// --- INSTALL ---
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ALL))
@@ -28,6 +29,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
+// --- ACTIVATE ---
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -37,6 +39,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// --- FETCH ---
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.mode === 'navigate') {
@@ -59,7 +62,8 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// 🔔 Notifications : gestion du clic
+// --- NOTIFICATIONS ---
+// Quand l’utilisateur clique sur une notification
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
@@ -73,3 +77,14 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
+// Quand le script principal demande d’afficher une notification
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, body } = event.data;
+    self.registration.showNotification(title, {
+      body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png'
+    });
+  }
+});
