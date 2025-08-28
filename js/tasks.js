@@ -1,8 +1,7 @@
-/*** Module Tâches & To-Do*/
+   /*** Module Tâches & To-Do*/
 
 // ================================
 // BACKENDLESS >>> CONFIG MINIMALE
-// Mets tes clés ici (sinon fallback localStorage)
 const BL_APP_ID = "948A3DAD-06F1-4F45-BECA-A039688312DD";
 const BL_REST_KEY = "8C69AAC6-204C-48CE-A60B-137706E8E183";
 const BL_BASE = (BL_APP_ID && BL_REST_KEY)
@@ -10,8 +9,7 @@ const BL_BASE = (BL_APP_ID && BL_REST_KEY)
   : null;
 const BL_ON = !!BL_BASE;
 
-// --- Notifications helper (FIABLE mobile) ---
-// 1) demander la permission (à appeler dans un geste utilisateur)
+// --- Notifications helper ---
 async function ensureNotifPermission() {
   if (!('Notification' in window) || !('serviceWorker' in navigator)) return false;
   if (Notification.permission === 'granted') return true;
@@ -26,13 +24,11 @@ async function ensureNotifPermission() {
   }
 }
 
-// 2) afficher la notif via le Service Worker
 async function notify(title, body) {
   try {
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
     if (Notification.permission !== 'granted') return;
 
-    // Attend le SW prêt (plus fiable que getRegistration() sur mobile)
     const reg = await navigator.serviceWorker.ready;
     if (reg && reg.showNotification) {
       await reg.showNotification(title, {
@@ -44,7 +40,6 @@ async function notify(title, body) {
         renotify: false
       });
     } else {
-      // Fallback (peut être bloqué sur mobile)
       new Notification(title, { body });
     }
   } catch (e) {
@@ -52,7 +47,6 @@ async function notify(title, body) {
   }
 }
 
-// (garde faux pour éviter notif au re-rendu)
 const SHOULD_NOTIFY_ON_RENDER = false;
 
 async function blEnsureOK(res){
@@ -98,10 +92,8 @@ export function initTasks() {
   const archiveList = document.getElementById('archived-list');
   const btnExp = document.getElementById('export-tasks');
 
-  // BACKENDLESS >>> état en mémoire
   let tasks = [];
   let archived = [];
-  // BACKENDLESS <<<
 
   // ---------- Affichage ----------
   function renderTask(t) {
@@ -114,12 +106,8 @@ export function initTasks() {
       </div>`;
     const [btnDone, btnDel] = li.querySelectorAll('button');
 
-    if (SHOULD_NOTIFY_ON_RENDER && typeof t.text === 'string') {
-      // désactivé par défaut
-      notify('Ajout dans la liste', t.text);
-    }
-
     btnDone.onclick = async () => {
+      console.log('[tasks] archive', t.text);
       if (BL_ON) {
         await blSetArchived(t.objectId, true);
         await refresh();
@@ -129,6 +117,7 @@ export function initTasks() {
     };
     btnDel.onclick = async () => {
       if (!confirm('Supprimer définitivement ?')) return;
+      console.log('[tasks] supprime', t.text);
       if (BL_ON) {
         await blRemove(t.objectId);
         await refresh();
@@ -153,6 +142,7 @@ export function initTasks() {
     const [btnRestore, btnDel] = li.querySelectorAll('button');
 
     btnRestore.onclick = async () => {
+      console.log('[tasks] restaure', t.text);
       if (BL_ON) {
         await blSetArchived(t.objectId, false);
         await refresh();
@@ -175,7 +165,7 @@ export function initTasks() {
     archiveList.appendChild(li);
   }
 
-  // ---------- Logique locale fallback ----------
+  // ---------- Fallback local ----------
   function moveToArchive(id, li) {
     const idx = tasks.findIndex(t => t.id === id);
     if (idx === -1) return;
@@ -225,21 +215,22 @@ export function initTasks() {
     const txt = input.value.trim();
     if (!txt) return;
 
-    // 🔑 IMPORTANT : on demande la permission *pendant* le geste utilisateur
     await ensureNotifPermission();
 
     if (BL_ON) {
+      console.log('[tasks] ajout (Backendless)', txt);
       await blCreate(txt);
       input.value = '';
       await refresh();
-      await notify('Nouvelle tâche', txt);  // 🔔 ici
+      notify('Nouvelle tâche', txt);
     } else {
+      console.log('[tasks] ajout (local)', txt);
       const t = { id: Date.now(), text: txt };
       tasks.push(t);
       saveAll();
       renderTask(t);
       input.value = '';
-      await notify('Nouvelle tâche', txt);  // 🔔 ici
+      notify('Nouvelle tâche', txt);
     }
   });
 
@@ -270,15 +261,13 @@ export function initTasks() {
   refresh();
 }
 
-/*** Pour le Dashboard : récupération et ajout rapides*/
+/*** Dashboard */
 export function getTasks() {
   if (BL_ON) return blList(false);
   return JSON.parse(localStorage.getItem('tasks') || '[]');
 }
 export async function saveTask(text) {
-  // 🔑 Demande la permission si appelée depuis un bouton "Ajouter" du dashboard
   await ensureNotifPermission();
-
   if (BL_ON) { 
     await blCreate(text); 
     await notify('Nouvelle tâche', text); 
@@ -288,4 +277,4 @@ export async function saveTask(text) {
   tasks.push({ id: Date.now(), text });
   localStorage.setItem('tasks', JSON.stringify(tasks));
   await notify('Nouvelle tâche', text);
-        }
+}       
