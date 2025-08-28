@@ -1,5 +1,5 @@
 // sw.js — PWA offline avec fallback SPA
-const CACHE_NAME = 'stage-planner-v13';
+const CACHE_NAME = 'stage-planner-v15';
 
 const APP_SHELL = [
   '/',
@@ -96,3 +96,4 @@ self.addEventListener('notificationclick', (event) => {
    - self.addEventListener('pushsubscriptionchange', ...)
    - le 2e notificationclick redondant
    ============================================================ */
+
