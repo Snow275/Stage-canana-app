@@ -1,5 +1,5 @@
 // sw.js — PWA offline avec fallback SPA
-const CACHE_NAME = 'stage-planner-v14;
+const CACHE_NAME = 'stage-planner-v11';
 
 const APP_SHELL = [
   '/',
@@ -13,15 +13,17 @@ const APP_SHELL = [
   '/icons/icon-192.png',
   '/icons/icon-512.png',
 ];
+
 const EXTERNALS = [
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
   'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.4/index.global.min.js',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
 ];
+
 const SHELL_ALL = APP_SHELL.concat(EXTERNALS);
 
-// --- INSTALL ---
+// Install → précache l’UI
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ALL))
@@ -29,7 +31,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// --- ACTIVATE ---
+// Activate → supprime les vieux caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -39,15 +41,34 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// --- FETCH ---
+// Fetch handler
 self.addEventListener('fetch', (event) => {
   const req = event.request;
+  const url = new URL(req.url);
+
+  // ❗️1) NE PAS mettre en cache l’API Backendless (toujours réseau)
+  if (url.origin === 'https://api.backendless.com') {
+    // pour sécurité: toutes méthodes non-GET → direct réseau
+    if (req.method !== 'GET') {
+      event.respondWith(fetch(req));
+      return;
+    }
+    // GET → network-first, fallback cache si vraiment offline
+    event.respondWith(
+      fetch(req).catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // 2) Navigations → renvoie index.html depuis le cache (SPA fallback)
   if (req.mode === 'navigate') {
     event.respondWith(
       caches.match('/index.html').then((res) => res || fetch(req))
     );
     return;
   }
+
+  // 3) Assets (CSS/JS/icônes/CDN) → cache-first puis réseau
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
@@ -62,8 +83,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// --- NOTIFICATIONS ---
-// Quand l’utilisateur clique sur une notification
+// 🔔 Notifications : clic → focus/ouverture
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
@@ -76,19 +96,3 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
-
-// Quand le script principal demande d’afficher une notification
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-    const { title, body } = event.data;
-    self.registration.showNotification(title, {
-      body,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png'
-    });
-  }
-});
-
-
-
-
