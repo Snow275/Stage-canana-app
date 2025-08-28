@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = "stage-planner-v1";
+const CACHE_NAME = "stage-planner-v2";
 const ASSETS = [
   "/",
   "/index.html",
