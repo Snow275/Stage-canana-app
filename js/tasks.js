@@ -3,15 +3,14 @@
 
 // ================================
 // BACKENDLESS >>> CONFIG MINIMALE
-// Mets tes clés ici (sinon fallback localStorage)
-const BL_APP_ID = "948A3DAD-06F1-4F45-BECA-A039688312DD"; // ex: "948A3DAD-06F1-4F45-BECA-XXXXXXXXXXXX"
-const BL_REST_KEY = "8C69AAC6-204C-48CE-A60B-137706E8E183"; // ex: "4A7AA6A1-E3D7-4F93-87E6-XXXXXXXXXXXX"
+const BL_APP_ID = "948A3DAD-06F1-4F45-BECA-A039688312DD";
+const BL_REST_KEY = "8C69AAC6-204C-48CE-A60B-137706E8E183";
 const BL_BASE = (BL_APP_ID && BL_REST_KEY)
   ? `https://api.backendless.com/${BL_APP_ID}/${BL_REST_KEY}/data/Taches`
   : null;
 const BL_ON = !!BL_BASE;
 
-// --- Notifications helper (ajouté) ---
+// --- Notifications helper ---
 async function notify(title, body) {
   try {
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
@@ -30,9 +29,6 @@ async function notify(title, body) {
     }
   } catch { /* no-op */ }
 }
-
-// (ajouté) drapeau pour désactiver la notif au re-rendu sans supprimer la ligne d’origine
-const SHOULD_NOTIFY_ON_RENDER = false;
 
 async function blEnsureOK(res){
   if(!res.ok){
@@ -77,11 +73,8 @@ export function initTasks() {
   const archiveList = document.getElementById('archived-list');
   const btnExp = document.getElementById('export-tasks');
 
-  // --------------------------
-  // BACKENDLESS >>> état en mémoire (remplace juste l'init locale)
   let tasks = [];
   let archived = [];
-  // BACKENDLESS <<<
 
   // ---------- Affichage ----------
   function renderTask(t) {
@@ -94,19 +87,11 @@ export function initTasks() {
       </div>`;
     const [btnDone, btnDel] = li.querySelectorAll('button');
 
-    // (modifié sans suppression) — on garde la ligne de notif mais on la neutralise
-    if (SHOULD_NOTIFY_ON_RENDER && typeof txt !== 'undefined') {
-      notify('Ajout dans la liste', txt);
-    }
-
-    // BACKENDLESS >>>
     btnDone.onclick = async () => {
       if (BL_ON) {
-        // archiver côté serveur
         await blSetArchived(t.objectId, true);
         await refresh();
       } else {
-        // comportement initial local
         moveToArchive(t.id, li);
       }
     };
@@ -121,7 +106,6 @@ export function initTasks() {
         li.remove();
       }
     };
-    // BACKENDLESS <<<
 
     list.appendChild(li);
   }
@@ -136,7 +120,6 @@ export function initTasks() {
       </div>`;
     const [btnRestore, btnDel] = li.querySelectorAll('button');
 
-    // BACKENDLESS >>>
     btnRestore.onclick = async () => {
       if (BL_ON) {
         await blSetArchived(t.objectId, false);
@@ -156,12 +139,10 @@ export function initTasks() {
         li.remove();
       }
     };
-    // BACKENDLESS <<<
 
     archiveList.appendChild(li);
   }
 
-  // ---------- Logique locale d'origine (gardée pour fallback) ----------
   function moveToArchive(id, li) {
     const idx = tasks.findIndex(t => t.id === id);
     if (idx === -1) return;
@@ -194,8 +175,6 @@ export function initTasks() {
     archived.forEach(renderArchived);
   }
 
-  // ---------- Chargement initial ----------
-  // BACKENDLESS >>>
   async function refresh() {
     if (BL_ON) {
       [tasks, archived] = await Promise.all([
@@ -208,7 +187,6 @@ export function initTasks() {
     }
     renderAll();
   }
-  // BACKENDLESS <<<
 
   // ---------- Ajout ----------
   form.addEventListener('submit', async e => {
@@ -220,7 +198,6 @@ export function initTasks() {
       await blCreate(txt);
       input.value = '';
       await refresh();
-      // (ajouté) notification après succès serveur
       notify('Nouvelle tâche', txt);
     } else {
       const t = { id: Date.now(), text: txt };
@@ -228,14 +205,12 @@ export function initTasks() {
       saveAll();
       renderTask(t);
       input.value = '';
-      // (ajouté) notification après succès local
       notify('Nouvelle tâche', txt);
     }
   });
 
   // ---------- Export CSV ----------
   btnExp.addEventListener('click', async () => {
-    // s'assure d'avoir l'état à jour si backendless
     if (BL_ON && (!tasks.length && !archived.length)) {
       await refresh();
     }
@@ -257,18 +232,15 @@ export function initTasks() {
     document.body.removeChild(a);
   }
 
-  // GO
   refresh();
 }
 
-/*** Pour le Dashboard : récupération et ajout rapides*/
+/*** Dashboard quick add */
 export function getTasks() {
-  // si BL actif, renvoie une promesse (async), sinon comportement initial
   if (BL_ON) return blList(false);
   return JSON.parse(localStorage.getItem('tasks') || '[]');
 }
 export async function saveTask(text) {
-  // (modifié) on ajoute la notification ici aussi
   if (BL_ON) {
     await blCreate(text);
     notify('Nouvelle tâche', text);
