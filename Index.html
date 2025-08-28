@@ -527,73 +527,7 @@ window.addEventListener('DOMContentLoaded', askNotifPermission);
     Hors ligne — affichage en mode local
 </div>
 
-<script>
-(async function debugNotifications() {
-  try {
-    console.log('[notif] support:', 'Notification' in window, 'SW:' , 'serviceWorker' in navigator);
 
-    // 1) Vérifie/enregistre le SW puis attend qu’il soit prêt
-    if (!('serviceWorker' in navigator)) return;
-    let reg;
-    try {
-      // garde ton register('/sw.js') déjà présent, ce call re-utilise le même SW si déjà inscrit
-      reg = await navigator.serviceWorker.register('/sw.js');
-      console.log('[notif] sw register ok:', reg.scope);
-    } catch (e) {
-      console.error('[notif] sw register KO', e);
-      return;
-    }
-
-    const ready = await navigator.serviceWorker.ready;
-    console.log('[notif] sw ready:', !!ready);
-
-    // 2) Vérifie la permission
-    if (!('Notification' in window)) {
-      console.warn('[notif] API Notification non supportée');
-      return;
-    }
-
-    console.log('[notif] permission actuelle:', Notification.permission);
-    let perm = Notification.permission;
-    if (perm === 'default') {
-      try {
-        perm = await Notification.requestPermission();
-        console.log('[notif] permission après demande:', perm);
-      } catch (e) {
-        console.warn('[notif] requestPermission KO', e);
-      }
-    }
-    if (perm !== 'granted') {
-      console.warn('[notif] permission non accordée (', perm, ')');
-      return;
-    }
-
-    // 3) Envoie une notif de test via le SW (méthode la plus fiable)
-    try {
-      await ready.showNotification('Test notifications ✅', {
-        body: 'Si tu vois ceci, les notifs sont OK.',
-        icon: '/icons/icon-192.png',
-        badge: '/icons/icon-192.png',
-        tag: 'test-notif-once',
-        renotify: false,
-        vibrate: [60, 20, 60]
-      });
-      console.log('[notif] test envoyé via SW.');
-    } catch (e) {
-      console.error('[notif] showNotification KO', e);
-      // Fallback direct (moins fiable)
-      try {
-        new Notification('Test notifications ✅', { body: 'Fallback direct depuis la page.' });
-        console.log('[notif] fallback new Notification() envoyé.');
-      } catch (e2) {
-        console.error('[notif] fallback KO', e2);
-      }
-    }
-  } catch (e) {
-    console.error('[notif] erreur globale', e);
-  }
-})();
-</script>
 </body>
 </html>
 
