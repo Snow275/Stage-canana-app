@@ -1,139 +1,126 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#2C3E50" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Stage Canada Planner</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#2C3E50" />
 
-  <!-- iOS PWA support -->
+  <!-- iOS PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Stage Planner CA" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
 
-  <!-- Bootstrap 5 CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <!-- FullCalendar CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.4/index.global.min.css" rel="stylesheet" />
-  <!-- Ton style perso -->
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- FullCalendar -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.4/index.global.min.css" rel="stylesheet">
+  <!-- Style -->
   <link rel="stylesheet" href="css/style.css" />
 </head>
-
 <body class="d-flex">
 
-  <!-- Sidebar -->
-  <nav id="sidebar" class="bg-dark text-white p-3" style="width:250px;">
-    <a href="#" class="d-flex align-items-center mb-3 text-white text-decoration-none">
-      <span class="fs-4">Trip Planner 🇨🇦</span>
-    </a>
-    <hr class="text-secondary"/>
-    <ul class="nav nav-pills flex-column mb-auto" role="tablist">
-      <li class="nav-item"><button class="nav-link active text-white" data-bs-toggle="pill" data-bs-target="#dashboard" type="button">🏠 Tableau de bord</button></li>
-      <li class="nav-item"><button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#preparation" type="button">📝 Préparation</button></li>
-      <li class="nav-item"><button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#courses" type="button">🛒 Courses</button></li>
-      <li class="nav-item"><button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#contacts" type="button">👥 Contacts</button></li>
-      <li class="nav-item"><button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#finances" type="button">💰 Finances</button></li>
-      <li class="nav-item"><button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#documents" type="button">📂 Documents</button></li>
-    </ul>
-    <hr class="text-secondary"/>
-    <div class="text-center"><small>© 2025 Stage Planner</small></div>
-  </nav>
+<!-- Sidebar -->
+<nav id="sidebar" class="bg-dark text-white p-3" style="width:250px;">
+  <span class="fs-4">Canada Planner 🇨🇦</span>
+  <hr class="text-secondary"/>
+  <ul class="nav nav-pills flex-column mb-auto" role="tablist">
+    <li><button class="nav-link active text-white" data-bs-toggle="pill" data-bs-target="#dashboard" type="button">🏠 Tableau de bord</button></li>
+    <li><button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#preparation" type="button">📝 Préparation</button></li>
+    <li><button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#courses" type="button">🛒 Courses</button></li>
+    <li><button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#contacts" type="button">👥 Contacts</button></li>
+    <li><button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#finances" type="button">💰 Finances</button></li>
+    <li><button class="nav-link text-white" data-bs-toggle="pill" data-bs-target="#documents" type="button">📂 Documents</button></li>
+  </ul>
+  <hr class="text-secondary"/>
+  <div class="text-center"><small>© 2025 Stage Planner</small></div>
+</nav>
 
-  <!-- Main content -->
-  <div class="tab-content flex-grow-1 p-4" style="overflow-y:auto; height:100vh;">
-    <!-- (tes onglets et contenu restent inchangés) -->
+<!-- Main -->
+<div class="tab-content flex-grow-1 p-4" style="overflow-y:auto; height:100vh;">
+
+  <!-- Préparation -->
+  <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
+    <h2>Tableau de bord</h2>
+    <p>Ici tu peux voir un résumé rapide.</p>
   </div>
 
-  <!-- JS Libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.4/index.global.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <div class="tab-pane fade" id="preparation" role="tabpanel">
+    <h2>Préparation</h2>
+    <div class="row gy-4">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">📝 Tâches & To-do</div>
+          <div class="card-body" id="tasks-section">
+            <form id="task-form" class="d-flex mb-3">
+              <input type="text" id="task-input" class="form-control me-2" placeholder="Nouvelle tâche…" required>
+              <button class="btn btn-success">Ajouter</button>
+            </form>
+            <ul id="task-list" class="list-group mb-4"></ul>
+            <h6>📂 Archive des tâches</h6>
+            <ul id="archived-list" class="list-group"></ul>
+          </div>
+        </div>
+      </div>
 
-  <!-- Firebase -->
-  <script type="module" src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js"></script>
-  <script type="module" src="js/firebase.js"></script>
-  <script type="module" src="js/app.js"></script>
-
-  <!-- Gun -->
-  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
-
-  <!-- Modules locaux -->
-  <script src="js/tasks.js"></script>
-  <script src="js/courses.js"></script>
-  <script src="js/dishes.js"></script>
-
-  <script>
-    // Initialisation quand la page est prête
-    window.addEventListener("DOMContentLoaded", () => {
-      try { window.initTasks && window.initTasks(); } catch(e){ console.error('initTasks KO', e); }
-      try { window.initCourses && window.initCourses(); } catch(e){ console.error('initCourses KO', e); }
-      try { window.initDishes && window.initDishes(); } catch(e){ console.error('initDishes KO', e); }
-    });
-  </script>
-
-  <script>
-    // Fix resize calendrier
-    document.querySelector('button[data-bs-target="#preparation"]').addEventListener('shown.bs.tab', () => {
-      window.dispatchEvent(new Event('resize'));
-    });
-
-    // Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(() => console.log('SW enregistré'))
-        .catch(err => console.error('SW KO', err));
-    }
-  </script>
-
-  <!-- ✅ Nouveau script bandeau offline -->
-  <script>
-    function updateOnlineStatus() {
-      const banner = document.getElementById('offline-banner');
-      if (navigator.onLine) {
-        banner.style.display = 'none';   // reste caché en ligne
-      } else {
-        banner.style.display = 'block';  // affiche seulement hors ligne
-      }
-    }
-
-    // écoute uniquement les vrais changements de statut
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
-
-    // vérifie au chargement : si offline → affiche, sinon → reste caché
-    window.addEventListener('DOMContentLoaded', () => {
-      if (!navigator.onLine) {
-        document.getElementById('offline-banner').style.display = 'block';
-      }
-    });
-  </script>
-
-  <!-- Barre navigation mobile -->
-  <nav id="mobile-nav">
-    <button data-bs-toggle="pill" data-bs-target="#dashboard" aria-label="Tableau de bord">🏠</button>
-    <button data-bs-toggle="pill" data-bs-target="#preparation" aria-label="Préparation">📝</button>
-    <button data-bs-toggle="pill" data-bs-target="#courses" aria-label="Courses">🛒</button>
-    <button data-bs-toggle="pill" data-bs-target="#contacts" aria-label="Contacts">👥</button>
-    <button data-bs-toggle="pill" data-bs-target="#finances" aria-label="Finances">💰</button>
-    <button data-bs-toggle="pill" data-bs-target="#documents" aria-label="Documents">📂</button>
-  </nav>
-
-  <!-- Bandeau Offline -->
-  <div id="offline-banner" style="
-    display:none;
-    position:fixed;
-    top:0; left:0; right:0;
-    background:#ff4d4d;
-    color:white;
-    text-align:center;
-    padding:8px;
-    font-size:14px;
-    z-index:2000;">
-      Vous êtes hors ligne — affichage en mode local
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-header">📅 Calendrier</div>
+          <div class="card-body p-0" id="calendar-section" style="height:600px;">
+            <div id="calendar" style="height:100%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
+  <!-- Courses -->
+  <div class="tab-pane fade" id="courses" role="tabpanel">
+    <h2>Courses / Packing List</h2>
+    <div class="card">
+      <div class="card-body">
+        <form id="course-form" class="d-flex mb-3">
+          <input id="course-input" type="text" class="form-control me-2" placeholder="Nouvel item…" required>
+          <button class="btn btn-primary">Ajouter</button>
+        </form>
+        <ul id="course-list" class="list-group mb-3"></ul>
+        <button id="export-courses" class="btn btn-outline-secondary btn-sm">Export CSV</button>
+
+        <hr>
+        <h5>🍽️ Liste de plats</h5>
+        <form id="dish-form" class="d-flex mb-3">
+          <input id="dish-input" type="text" class="form-control me-2" placeholder="Ajouter un plat…" required>
+          <button type="submit" class="btn btn-success">Ajouter</button>
+        </form>
+        <ul id="dish-list" class="list-group mb-3"></ul>
+        <button id="export-dishes" class="btn btn-outline-secondary btn-sm">Export CSV</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.4/index.global.min.js"></script>
+
+<script src="js/tasks.js"></script>
+<script src="js/dishes.js"></script>
+
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+  if (window.initTasks) window.initTasks();
+  if (window.initDishes) window.initDishes();
+});
+
+// SW
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js')
+    .then(() => console.log("✅ Service Worker enregistré"))
+    .catch(err => console.error("❌ SW KO", err));
+}
+</script>
 </body>
 </html>
