@@ -10,29 +10,28 @@ const BL_BASE = (BL_APP_ID && BL_REST_KEY)
   : null;
 const BL_ON = !!BL_BASE;
 
-const reg = await navigator.serviceWorker.getRegistration();
-if (reg && reg.showNotification) {
-   await reg.showNotification(title, { body });
-}
 
-// --- Notifications helper ---
 async function notify(title, body) {
   try {
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
     if (Notification.permission !== 'granted') return;
 
-    const reg = await navigator.serviceWorker.getRegistration();
+    const reg = await navigator.serviceWorker.ready; // <-- garantit que le SW est prêt
     if (reg && reg.showNotification) {
       await reg.showNotification(title, {
         body,
         icon: '/icons/icon-192.png',
         badge: '/icons/icon-192.png',
-        silent: false
+        vibrate: [100, 50, 100], // petit retour haptique
+        tag: 'stage-planner',   // évite les doublons
+        renotify: true
       });
     } else {
       new Notification(title, { body });
     }
-  } catch { /* no-op */ }
+  } catch (err) {
+    console.warn("Erreur notif:", err);
+  }
 }
 
 async function blEnsureOK(res){
@@ -256,4 +255,5 @@ export async function saveTask(text) {
   localStorage.setItem('tasks', JSON.stringify(tasks));
   notify('Nouvelle tâche', text);
 }
+
 
