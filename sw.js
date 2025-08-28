@@ -46,25 +46,19 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // ❗️1) NE PAS mettre en cache l’API Backendless (toujours réseau)
+  // 1) NE PAS mettre en cache l’API Backendless (toujours réseau)
   if (url.origin === 'https://api.backendless.com') {
-    // pour sécurité: toutes méthodes non-GET → direct réseau
     if (req.method !== 'GET') {
       event.respondWith(fetch(req));
       return;
     }
-    // GET → network-first, fallback cache si vraiment offline
-    event.respondWith(
-      fetch(req).catch(() => caches.match(req))
-    );
+    event.respondWith(fetch(req).catch(() => caches.match(req)));
     return;
   }
 
   // 2) Navigations → renvoie index.html depuis le cache (SPA fallback)
   if (req.mode === 'navigate') {
-    event.respondWith(
-      caches.match('/index.html').then((res) => res || fetch(req))
-    );
+    event.respondWith(caches.match('/index.html').then((res) => res || fetch(req)));
     return;
   }
 
@@ -83,7 +77,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// 🔔 Notifications : clic → focus/ouverture
+// 🔔 Notifications locales : clic → focus/ouverture
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
@@ -97,33 +91,8 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// sw.js — gestion des push pour notifs en arrière-plan
-self.addEventListener('push', (event) => {
-  let data = {};
-  try { data = event.data ? event.data.json() : {}; } catch {}
-  const title = data.title || 'Stage Planner';
-  const body  = data.body  || '';
-  const icon  = data.icon  || '/icons/icon-192.png';
-  const badge = data.badge || '/icons/icon-192.png';
-  const tag   = data.tag   || 'stage-planner-push';
-
-  event.waitUntil(
-    self.registration.showNotification(title, {
-      body, icon, badge, tag, renotify: false
-    })
-  );
-});
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((arr) => {
-      if (arr.length) return arr[0].focus();
-      return clients.openWindow('/');
-    })
-  );
-});
-
-self.addEventListener('pushsubscriptionchange', async (event) => {
-  // Optionnel: re-souscrire automatiquement si besoin
-});
+/* ==== SUPPRIMÉ (Web Push) ===================================
+   - self.addEventListener('push', ...)
+   - self.addEventListener('pushsubscriptionchange', ...)
+   - le 2e notificationclick redondant
+   ============================================================ */
