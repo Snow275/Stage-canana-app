@@ -10,6 +10,11 @@ const BL_BASE = (BL_APP_ID && BL_REST_KEY)
   : null;
 const BL_ON = !!BL_BASE;
 
+const reg = await navigator.serviceWorker.getRegistration();
+if (reg && reg.showNotification) {
+   await reg.showNotification(title, { body });
+}
+
 // --- Notifications helper ---
 async function notify(title, body) {
   try {
@@ -251,3 +256,4 @@ export async function saveTask(text) {
   localStorage.setItem('tasks', JSON.stringify(tasks));
   notify('Nouvelle tâche', text);
 }
+
