@@ -16,7 +16,6 @@ const MY_DEVICE_ID = (() => {
     const KEY = 'stage_planner_device_id';
     let id = localStorage.getItem(KEY);
     if (!id) {
-      // id pseudo-unique simple
       id = 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8);
       localStorage.setItem(KEY, id);
     }
@@ -32,7 +31,6 @@ async function notify(title, body) {
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
     if (Notification.permission !== 'granted') return;
 
-    // Attend le SW prêt (plus fiable que getRegistration() sur mobile)
     const reg = await navigator.serviceWorker.ready;
     if (reg && reg.showNotification) {
       await reg.showNotification(title, {
@@ -44,7 +42,6 @@ async function notify(title, body) {
         renotify: false
       });
     } else {
-      // Fallback (peut être bloqué sur mobile)
       new Notification(title, { body });
     }
   } catch (e) {
@@ -61,6 +58,12 @@ const SELF_CREATED_IDS = new Set();
 // Pour détecter les nouvelles tâches entre deux refresh()
 let lastTaskIds = new Set();
 let firstLoadDone = false;
+
+// 🔁 Polling (pour que les autres appareils voient les nouvelles tâches)
+const POLL_MS = 8000; // 8s (tu peux mettre 5000 si tu veux plus rapide)
+let pollTimer = null;
+function startPolling() { stopPolling(); pollTimer = setInterval(refresh, POLL_MS); }
+function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
 
 async function blEnsureOK(res){
   if(!res.ok){
@@ -83,7 +86,7 @@ async function blList(archived){
 }
 
 async function blCreate(text){
-  const payload = { text, archived:false, creatorDeviceId: MY_DEVICE_ID }; // on envoie aussi le deviceId
+  const payload = { text, archived:false, creatorDeviceId: MY_DEVICE_ID };
   const res = await fetch(BL_BASE, {
     method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify(payload)
@@ -131,7 +134,6 @@ export function initTasks() {
     const [btnDone, btnDel] = li.querySelectorAll('button');
 
     if (SHOULD_NOTIFY_ON_RENDER && typeof t.text === 'string') {
-      // désactivé par défaut
       notify('Ajout dans la liste', t.text);
     }
 
@@ -226,7 +228,6 @@ export function initTasks() {
 
   // ---------- Chargement initial + détection des nouvelles tâches ----------
   async function refresh() {
-    // récupère l’état précédent des IDs pour détecter les nouveaux
     const previousIds = new Set(lastTaskIds);
 
     if (BL_ON) {
@@ -236,44 +237,35 @@ export function initTasks() {
       archived = JSON.parse(localStorage.getItem('archivedTasks') || '[]');
     }
 
-    // maj de l'affichage
     renderAll();
 
-    // construit l’ensemble courant des IDs
     const currentIds = new Set(tasks.map(t => t.objectId || t.id));
 
-    // sur premier chargement, on initialise sans notifier
     if (!firstLoadDone) {
       lastTaskIds = currentIds;
       firstLoadDone = true;
       return;
     }
 
-    // Détecte les nouvelles tâches apparues depuis le dernier refresh
     const newTasks = tasks.filter(t => !previousIds.has(t.objectId || t.id));
 
-    // Notifie pour les nouvelles tâches… sauf si créées par CE device
     for (const t of newTasks) {
       const id = t.objectId || t.id;
 
-      // 1) Filtre fort: si on retrouve l’ID dans SELF_CREATED_IDS -> ne pas notifier le créateur
+      // pas de notif pour le créateur local
       if (SELF_CREATED_IDS.has(id)) {
-        SELF_CREATED_IDS.delete(id); // nettoie pour ne pas croître à l’infini
+        SELF_CREATED_IDS.delete(id);
         continue;
       }
-
-      // 2) Si le champ creatorDeviceId est présent ET correspond à ce device, on ne notifie pas
       if (t.creatorDeviceId && t.creatorDeviceId === MY_DEVICE_ID) {
         continue;
       }
 
-      // Sinon -> on notifie (autres appareils)
       if (t.text) {
         notify('Nouvelle tâche', t.text);
       }
     }
 
-    // Enfin, on mémorise l’état courant
     lastTaskIds = currentIds;
   }
 
@@ -285,25 +277,21 @@ export function initTasks() {
 
     if (BL_ON) {
       const created = await blCreate(txt);
-      // mémorise l’ID créé par CET appareil pour éviter la notif locale au prochain refresh
       if (created && created.objectId) {
         SELF_CREATED_IDS.add(created.objectId);
       }
       input.value = '';
-      await refresh(); // pas de notify ici → les autres appareils verront une "nouvelle tâche" et seront notifiés
+      await refresh();
     } else {
       const tmpId = Date.now();
       const t = { id: tmpId, text: txt, creatorDeviceId: MY_DEVICE_ID };
-      itemsPushLocal(t); // push + save + render
+      itemsPushLocal(t);
       input.value = '';
-      // évite la notif locale (la détection se fait dans refresh)
       SELF_CREATED_IDS.add(tmpId);
-      // pour le mode local, on peut quand même rafraîchir l’état mémoire (même si pas obligatoire)
       await refresh();
     }
   });
 
-  // petit helper pour la branche locale
   function itemsPushLocal(t) {
     tasks.push(t);
     saveAll();
@@ -335,6 +323,18 @@ export function initTasks() {
 
   // GO
   refresh();
+
+  // 🔁 Auto-refresh pour capter les ajouts des autres appareils
+  startPolling();
+  window.addEventListener('focus', refresh);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      refresh();
+      startPolling();
+    } else {
+      stopPolling();
+    }
+  });
 }
 
 /*** Pour le Dashboard : récupération et ajout rapides*/
@@ -343,7 +343,7 @@ export function getTasks() {
   return JSON.parse(localStorage.getItem('tasks') || '[]');
 }
 export async function saveTask(text) {
-  // Ici aussi : pas de notif locale au moment de créer, on laisse refresh() des autres appareils s’en charger
+  // Pas de notif locale ici : on laisse refresh() des autres appareils la déclencher
   if (BL_ON) {
     const created = await blCreate(text);
     if (created && created.objectId) {
