@@ -446,6 +446,16 @@ window.addEventListener('DOMContentLoaded', updateOnlineStatus);
   })();
 </script>
 
+<script>
+async function askNotifPermission() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+  if (Notification.permission === 'default') {
+    try { await Notification.requestPermission(); } catch {}
+  }
+}
+window.addEventListener('DOMContentLoaded', askNotifPermission);
+</script>
+
   <!-- Bandeau Offline -->
 <div id="offline-banner" style="
   display:none;
@@ -461,6 +471,7 @@ window.addEventListener('DOMContentLoaded', updateOnlineStatus);
 </div>
 </body>
 </html>
+
 
 
 
