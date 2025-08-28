@@ -13,6 +13,27 @@ const BL_BASE = (BL_APP_ID && BL_REST_KEY)
   : null;
 const BL_ON = !!BL_BASE;
 
+// --- Notifications helper (discret, ne casse rien si non supporté) ---
+async function notify(title, body) {
+  try {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+    if (Notification.permission !== 'granted') return; // on ne spam pas
+
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (reg && reg.showNotification) {
+      await reg.showNotification(title, {
+        body,
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+        silent: false
+      });
+    } else {
+      // fallback très simple
+      new Notification(title, { body });
+    }
+  } catch { /* no-op */ }
+}
+
 async function blEnsureOK(res) {
   if (!res.ok) {
     const txt = await res.text().catch(() => res.statusText);
@@ -147,13 +168,7 @@ export function initCourses() {
   });
 
 
-  // ... après avoir ajouté l'item avec succès :
-if (Notification.permission === 'granted' && navigator.serviceWorker.controller) {
-  navigator.serviceWorker.controller.postMessage({
-    type: 'SHOW_NOTIFICATION',
-    title: 'Courses',
-    body: `"${txt}" ajouté à la liste.`
-  });
+
 
   // ---------- Export CSV ----------
   btnExp.addEventListener('click', async () => {
@@ -191,4 +206,3 @@ if (Notification.permission === 'granted' && navigator.serviceWorker.controller)
   // ---------- Go ----------
   refresh();
 }
-
