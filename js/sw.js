@@ -70,8 +70,18 @@ self.addEventListener('fetch', (event) => {
         .catch(() => cached); // si tout échoue, on rend ce qu’on a (souvent null, mais on essaie)
     })
   );
-});
 
+// Réception d'un message depuis la page pour afficher une notification
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, body } = event.data;
+    self.registration.showNotification(title, {
+      body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+    });
+  }
+});
 
 
 
