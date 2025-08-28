@@ -91,6 +91,7 @@ export function initTasks() {
         <button class="btn btn-sm btn-outline-danger" title="Supprimer">❌</button>
       </div>`;
     const [btnDone, btnDel] = li.querySelectorAll('button');
+    notify('Ajout dans la liste', txt);
 
     // BACKENDLESS >>>
     btnDone.onclick = async () => {
@@ -262,3 +263,4 @@ export async function saveTask(text) {
   tasks.push({ id: Date.now(), text });
   localStorage.setItem('tasks', JSON.stringify(tasks));
 }
+
