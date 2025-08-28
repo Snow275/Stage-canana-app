@@ -97,35 +97,3 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// sw.js — gestion des push pour notifs en arrière-plan
-self.addEventListener('push', (event) => {
-  let data = {};
-  try { data = event.data ? event.data.json() : {}; } catch {}
-  const title = data.title || 'Stage Planner';
-  const body  = data.body  || '';
-  const icon  = data.icon  || '/icons/icon-192.png';
-  const badge = data.badge || '/icons/icon-192.png';
-  const tag   = data.tag   || 'stage-planner-push';
-
-  event.waitUntil(
-    self.registration.showNotification(title, {
-      body, icon, badge, tag, renotify: false
-    })
-  );
-});
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((arr) => {
-      if (arr.length) return arr[0].focus();
-      return clients.openWindow('/');
-    })
-  );
-});
-
-self.addEventListener('pushsubscriptionchange', async (event) => {
-  // Optionnel: re-souscrire automatiquement si besoin
-});
-
-
