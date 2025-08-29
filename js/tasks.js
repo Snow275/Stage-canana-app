@@ -1,15 +1,43 @@
-// js/tasks.js
 /*** Module Tâches & To-Do*/
 
 // ================================
 // BACKENDLESS >>> CONFIG MINIMALE
 // Mets tes clés ici (sinon fallback localStorage)
-const BL_APP_ID = "948A3DAD-06F1-4F45-BECA-A039688312DD"; // ex: "948A3DAD-06F1-4F45-BECA-XXXXXXXXXXXX"
-const BL_REST_KEY = "8C69AAC6-204C-48CE-A60B-137706E8E183"; // ex: "4A7AA6A1-E3D7-4F93-87E6-XXXXXXXXXXXX"
+const BL_APP_ID = "948A3DAD-06F1-4F45-BECA-A039688312DD";
+const BL_REST_KEY = "8C69AAC6-204C-48CE-A60B-137706E8E183";
 const BL_BASE = (BL_APP_ID && BL_REST_KEY)
   ? `https://api.backendless.com/${BL_APP_ID}/${BL_REST_KEY}/data/Taches`
   : null;
 const BL_ON = !!BL_BASE;
+
+// --- Notifications helper (FIABLE mobile) ---
+async function notify(title, body) {
+  try {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+    if (Notification.permission !== 'granted') return;
+
+    // Attend le SW prêt (plus fiable que getRegistration() sur mobile)
+    const reg = await navigator.serviceWorker.ready;
+    if (reg && reg.showNotification) {
+      await reg.showNotification(title, {
+        body,
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+        silent: false,
+        tag: 'stage-planner-task',
+        renotify: false
+      });
+    } else {
+      // Fallback (peut être bloqué sur mobile)
+      new Notification(title, { body });
+    }
+  } catch (e) {
+    console.warn('Notif KO:', e);
+  }
+}
+
+// (garde faux pour éviter notif au re-rendu)
+const SHOULD_NOTIFY_ON_RENDER = false;
 
 async function blEnsureOK(res){
   if(!res.ok){
@@ -17,12 +45,20 @@ async function blEnsureOK(res){
     throw new Error(`Backendless HTTP ${res.status}: ${txt}`);
   }
 }
+
+// ✅ Correction ICI : inclure archived=false **OU** archived is null pour les "en cours"
 async function blList(archived){
-  const q = `where=archived%3D${archived ? "true":"false"}&sortBy=created%20desc`;
+  let q;
+  if (archived) {
+    q = "where=archived%3Dtrue&sortBy=created%20desc";
+  } else {
+    q = "where=archived%3Dfalse%20or%20archived%20is%20null&sortBy=created%20desc";
+  }
   const res = await fetch(`${BL_BASE}?${q}`);
   await blEnsureOK(res);
   return res.json();
 }
+
 async function blCreate(text){
   const res = await fetch(BL_BASE, {
     method:"POST", headers:{ "Content-Type":"application/json" },
@@ -54,8 +90,7 @@ export function initTasks() {
   const archiveList = document.getElementById('archived-list');
   const btnExp = document.getElementById('export-tasks');
 
-  // --------------------------
-  // BACKENDLESS >>> état en mémoire (remplace juste l'init locale)
+  // BACKENDLESS >>> état en mémoire
   let tasks = [];
   let archived = [];
   // BACKENDLESS <<<
@@ -71,14 +106,16 @@ export function initTasks() {
       </div>`;
     const [btnDone, btnDel] = li.querySelectorAll('button');
 
-    // BACKENDLESS >>>
+    if (SHOULD_NOTIFY_ON_RENDER && typeof t.text === 'string') {
+      // désactivé par défaut
+      notify('Ajout dans la liste', t.text);
+    }
+
     btnDone.onclick = async () => {
       if (BL_ON) {
-        // archiver côté serveur
         await blSetArchived(t.objectId, true);
         await refresh();
       } else {
-        // comportement initial local
         moveToArchive(t.id, li);
       }
     };
@@ -93,7 +130,6 @@ export function initTasks() {
         li.remove();
       }
     };
-    // BACKENDLESS <<<
 
     list.appendChild(li);
   }
@@ -108,7 +144,6 @@ export function initTasks() {
       </div>`;
     const [btnRestore, btnDel] = li.querySelectorAll('button');
 
-    // BACKENDLESS >>>
     btnRestore.onclick = async () => {
       if (BL_ON) {
         await blSetArchived(t.objectId, false);
@@ -128,12 +163,11 @@ export function initTasks() {
         li.remove();
       }
     };
-    // BACKENDLESS <<<
 
     archiveList.appendChild(li);
   }
 
-  // ---------- Logique locale d'origine (gardée pour fallback) ----------
+  // ---------- Logique locale fallback ----------
   function moveToArchive(id, li) {
     const idx = tasks.findIndex(t => t.id === id);
     if (idx === -1) return;
@@ -167,20 +201,15 @@ export function initTasks() {
   }
 
   // ---------- Chargement initial ----------
-  // BACKENDLESS >>>
   async function refresh() {
     if (BL_ON) {
-      [tasks, archived] = await Promise.all([
-        blList(false),
-        blList(true)
-      ]);
+      [tasks, archived] = await Promise.all([ blList(false), blList(true) ]);
     } else {
       tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
       archived = JSON.parse(localStorage.getItem('archivedTasks') || '[]');
     }
     renderAll();
   }
-  // BACKENDLESS <<<
 
   // ---------- Ajout ----------
   form.addEventListener('submit', async e => {
@@ -192,18 +221,19 @@ export function initTasks() {
       await blCreate(txt);
       input.value = '';
       await refresh();
+      await notify('Nouvelle tâche', txt);  // 🔔 ici
     } else {
       const t = { id: Date.now(), text: txt };
       tasks.push(t);
       saveAll();
       renderTask(t);
       input.value = '';
+      await notify('Nouvelle tâche', txt);  // 🔔 ici
     }
   });
 
   // ---------- Export CSV ----------
   btnExp.addEventListener('click', async () => {
-    // s'assure d'avoir l'état à jour si backendless
     if (BL_ON && (!tasks.length && !archived.length)) {
       await refresh();
     }
@@ -231,13 +261,13 @@ export function initTasks() {
 
 /*** Pour le Dashboard : récupération et ajout rapides*/
 export function getTasks() {
-  // si BL actif, renvoie une promesse (async), sinon comportement initial
   if (BL_ON) return blList(false);
   return JSON.parse(localStorage.getItem('tasks') || '[]');
 }
 export async function saveTask(text) {
-  if (BL_ON) { await blCreate(text); return; }
+  if (BL_ON) { await blCreate(text); await notify('Nouvelle tâche', text); return; }
   const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
   tasks.push({ id: Date.now(), text });
   localStorage.setItem('tasks', JSON.stringify(tasks));
+  await notify('Nouvelle tâche', text);
 }
